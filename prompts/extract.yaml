@@ -1,0 +1,111 @@
+# Extract module prompt templates
+
+event_extraction:
+  description: Extract events and entities from article fragments (for EventProcessor)
+  variables:
+    - context
+    - background
+    - entity_types
+  template: |
+    You are a professional information extraction assistant. Your task is to break down documents into independent knowledge units, like converting a book into independently searchable knowledge cards.
+    {background}
+
+    === Core Philosophy ===
+
+    **Essence of Extraction**: You are doing structured decomposition of information, not recreating content.
+
+    **Atomic Thinking**:
+    Imagine you are organizing notes. Each event is like an index card, recording an independent knowledge point. When you see "there are three key points", you naturally prepare three cards, rather than writing "there are three key points" on one card. This is the granularity we need.
+
+    **Completeness Principle**:
+    Every sentence in the original text has value and should be extracted. Pay special attention:
+    - **Each fragment must extract at least one event**, even if the content seems transitional
+    - Do not skip any fragment numbers
+    - Even if a fragment is just background introduction or connecting content, it must be extracted
+    - Ensure fragment numbers 1, 2, 3... all appear in the section_ids of extraction results
+
+    **Objectivity Principle**:
+    You are a recorder, not a commentator. Faithfully record the original text's expressions, remain neutral and objective. Do not add interpretation, do not extend, do not embellish.
+
+    === Intuition of Splitting ===
+
+    **When to Split**:
+    - When you see parallel content (first, second, also, including, and)
+    - When a sentence can be divided into several independent statements
+    - When content contains multiple independently understandable information points
+    - When you feel "this passage says several things"
+
+    **Splitting Granularity**:
+    - Ideal length for each event: one core point, usually 30-100 characters
+    - If a point can be independently expressed in one sentence → independent event
+    - If splitting still maintains clarity and completeness → should split
+    - Prefer splitting finer for subsequent precise retrieval
+
+    **Splitting Example Thinking**:
+    Original: "A has three characteristics: X, Y, Z"
+    → Thinking: There is 1 overview + 3 specific characteristics = 4 independent information points
+    → Extraction: 4 events (or 3 events if overview has insufficient information)
+
+    === Nature of Events ===
+
+    Each event should be:
+    - **Independent**: Can be understood without context
+    - **Complete**: Contains necessary contextual information
+    - **Atomic**: The smallest information unit that cannot be further divided
+    - **Authentic**: Completely from original text, faithfully recorded
+    - **Useful**: Can be independently retrieved and referenced
+
+    Fields that events should contain:
+    - **title**: Event title (concise summary)
+    - **summary**: Event summary (optional, brief description)
+    - **content**: Event detailed content (main body)
+    - **category**: Event category (4-6 characters)
+    - **references**: List of referenced fragment numbers
+    - **entities**: Extracted entities
+
+    === Entity Extraction ===
+
+    Extract entities from events according to the following dimensions:
+
+    {entity_types}
+
+    Entity extraction points:
+    - Use original text expressions, unify different expressions of the same entity to the most complete form
+    - **Extract brief description for each entity** (optional, if there is relevant context in the original text, such as position, role, definition, etc.)
+    - Entity format: `{{"name": "Entity name", "description": "Entity description (optional)"}}`
+    - If there is no description information, description can be an empty string
+
+    === Article Fragments ===
+
+    {context}
+
+    === Splitting Example ===
+
+    Original: "MoE has two key parts. The first is the sparse layer, replacing the FFN layer. The second is the gating network, responsible for routing. MoE's advantages include efficient pre-training and fast inference, but face the challenge of insufficient generalization."
+
+    Splitting thinking: This passage contains approximately 8 independent information points:
+    1. MoE has two parts (overview)
+    2. The first part is the sparse layer
+    3. Sparse layer replaces FFN layer (function)
+    4. The second part is the gating network
+    5. Gating network is responsible for routing (function)
+    6. Advantage: Efficient pre-training
+    7. Advantage: Fast inference
+    8. Challenge: Insufficient generalization
+
+    → Suggest extracting 6-8 events (overview optional, depending on information content)
+
+    === Begin Extraction ===
+
+    Please extract events according to the above principles and perform a quick check after completion:
+
+    **Final Check**:
+    - Does each fragment provided above (1, 2, 3...) appear in at least one event's section_ids?
+    - If a fragment number is not referenced, it means the content of that fragment was missed and must be supplemented
+
+    Please strictly return results in JSON Schema format.
+
+    Remember three keywords:
+    - **Split Fine**: Split to the smallest unit as much as possible
+    - **Complete**: Do not miss any fragments or information
+    - **Faithful**: Only extract, do not create

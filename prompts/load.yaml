@@ -1,0 +1,98 @@
+# Load module prompt templates
+
+article_metadata:
+  description: Generate article metadata (title, summary, category, tags)
+  variables:
+    - content
+    - background
+  template: |
+    You are a professional document analysis assistant. Please analyze the following document content and extract key metadata.
+
+    === Background Information ===
+    {background}
+
+    === Document Content (First 2000 characters) ===
+    {content}
+
+    === Task Requirements ===
+    Please extract the following information:
+    1. **Title**: Generate a concise title for the document (if the document already has a title, use it directly)
+    2. **Summary**: Generate a 100-200 character document summary that outlines the core content
+    3. **Category**: Select the most appropriate category (Technical Document, Business Document, Personal Notes, Other)
+    4. **Tags**: Extract 3-5 keyword tags
+
+    Please strictly return in the following JSON format:
+    ```json
+    {{
+      "title": "Document title",
+      "summary": "Document summary...",
+      "category": "Technical Document",
+      "tags": ["Tag1", "Tag2", "Tag3"]
+    }}
+    ```
+
+article_metadata_with_sumy:
+  description: Generate article metadata (title, category, tags) using pre-generated high-quality summary
+  variables:
+    - token_limit
+    - background
+    - content
+  template: |
+    You are an expert in generating article summaries based on key sentences extracted by the sumy library. You must strictly follow the following requirements. **Core goal: 100% coverage of all key sentence core information, zero omissions**.
+      ### I. Core Content Constraints (New explicit standards, priority: 1 > 2 > 3)
+      1. **Key Sentence Coverage**: Extract core information points from each key sentence (no need to correspond to original sentence count/order), ensure no omissions before integration.
+        - Core information point definition: Subject-verb-object core relationships (e.g., "who did what", "what caused what"), key data (numbers/percentages), conclusive vocabulary (e.g., "caused", "improved", "key"), limiting conditions (e.g., "2023", "certain field"), all must be extracted as independent information units.
+        - After extraction, semantically related, overlapping core information points can be merged and summarized (e.g., same-topic parallel, causal-related information), but after merging, all extracted core information points must be included, and no content should be deleted due to merging.
+      2. **Zero New Information**: Do not add any information, subjective opinions, irrelevant examples, or decorative content not mentioned in key sentences.
+      3. **Streamline Secondary Information**: Can delete "repetitive adjectives, modal particles, unnecessary adverbials" from key sentences (e.g., "very", "possibly", "to some extent"), and deletion must not affect the completeness of core information points; repeated core information points in different key sentences can be merged (but must be retained once).
+
+      ### II. Logic and Language Requirements (Adjusted Priority)
+      1. **Information Completeness First, Relational Reorganization Second**: Prioritize ensuring all key core information points are complete, then reorganize and integrate related sentences according to the native logical relationships of key sentences (causal/parallel/progressive/temporal order); if logic is unclear, can be grouped by "thematic relevance of core information points" (same-topic information merged, different topics presented sequentially).
+      2. **Concise Language**: Use the shortest sentences to connect core elements, avoid repetitive expressions, ensure quick access to all key information frameworks.
+    ### III. Task Requirements 
+      Please extract the following information:
+      1. **Title**: Generate a concise title for the document (if the document already has a title, use it directly)
+      2. **Summary**: Generate a document summary within {token_limit} characters, outlining core content
+      3. **Category**: Select the most appropriate category (Technical Document, Business Document, Personal Notes, Other)
+      4. **Tags**: Extract 3-5 keyword tags
+
+    ### IV. Word Count and Format Control (Explicit Deletion Boundaries)
+      1. Do not overthink
+
+      ### Input Information
+      - Background information: {background}
+      - Key sentences extracted by sumy library: {content}
+
+    Please strictly return in the following JSON format:
+    ```json
+    {{
+      "title": "Document title",
+      "summary": "Document summary...",
+      "category": "Technical Document",
+      "tags": ["Tag1", "Tag2", "Tag3"]
+    }}
+    ```
+    
+
+article_summary:
+  description: Generate article summary
+  variables:
+    - title
+    - content
+  template: |
+    You are a professional article summary generation assistant.
+
+    Please generate a concise summary (100-200 characters) for the following article:
+
+    **Title**: {title}
+
+    **Content**:
+    {content}
+
+    **Requirements**:
+    1. Summarize the core content of the article
+    2. Highlight key information
+    3. Use concise and fluent language
+    4. Do not include subjective evaluations
+
+    Please return the summary text directly, without any prefix or markers.

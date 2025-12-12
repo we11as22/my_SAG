@@ -1,0 +1,128 @@
+# Search module prompt templates
+
+event_filter:
+  description: Use LLM to intelligently filter matching events
+  variables:
+    - events_list
+    - query
+    - background
+    - event_count
+    - threshold
+  template: |
+    You are a professional information retrieval assistant. Please filter matching events from the following event list based on the user's retrieval target.
+    {background}
+    ## Retrieval Target
+    {query}
+    
+    ## Candidate Event List (Total: {event_count})
+    
+    {events_list}
+    
+    ## Filtering Requirements
+    1. Carefully understand the intent of the retrieval target
+    2. Evaluate the relevance of each event to the retrieval target
+    3. Only select events with high relevance (relevance threshold: {threshold})
+    4. Return a list of matched event indices (e.g., [0, 3, 5])
+    5. If no matching events are found, return an empty list []
+    
+    ## Output Format
+    Please strictly return results in JSON Schema format, including the following fields:
+    - matched_indices: List of matched event indices
+    - reasoning: Brief explanation of filtering rationale (optional)
+
+extract_attributes:
+  description: Extract structured attributes from search query (for Stage1 search step 1)
+  variables:
+    - query
+  template: |
+    You are a professional query attribute extraction assistant. Please extract key structured attribute information from the user's search query.
+
+    === Query Text ===
+    {query}
+
+    === Extraction Requirements ===
+    Please identify key attributes in the query, including but not limited to:
+    - **person** (Person): Names, roles, positions, etc.
+    - **location** (Location): Geographic locations, institutions, system names, etc.
+    - **time** (Time): Specific time points, time periods, dates, etc.
+    - **topic** (Topic): Core themes, technical fields, industries, etc.
+    - **action** (Action): Operations, activities, event types, etc.
+    - **organization** (Organization): Companies, institutions, departments, etc.
+    - **product** (Product): Product names, service names, etc.
+
+    === Output Format (JSON) ===
+    ```json
+    {{
+      "attributes": [
+        {{
+          "name": "Attribute name",
+          "type": "Attribute type (person/location/time/topic/action, etc.)",
+          "context": "Context in the query",
+          "importance": "high/medium/low"
+        }}
+      ]
+    }}
+    ```
+
+    **Notes**:
+    1. If there are no clear attributes in the query, return an empty list
+    2. Attribute names should be concise and accurate
+    3. Judge attribute importance based on query context
+    4. Ensure valid JSON format is returned
+
+extract_attributes_with_rewrite:
+  description: Extract structured attributes from search query and rewrite query (colloquial to formal + vague to specific)
+  variables:
+    - query
+  template: |
+    You are a professional query analysis and optimization assistant. Please extract key structured attribute information from the user's search query and rewrite colloquial or vague queries into more precise, search-friendly queries.
+
+    === Original Query Text ===
+    {query}
+
+    === Task Requirements ===
+    1. **Attribute Extraction**: Identify key structured attributes in the query
+    2. **Query Rewriting**: Convert colloquial expressions to formal expressions, convert vague expressions to specific expressions
+
+    === Attribute Extraction Types ===
+    Please identify the following types of attributes:
+    - **person** (Person): Names, roles, positions, etc.
+    - **location** (Location): Geographic locations, institutions, system names, etc.
+    - **time** (Time): Specific time points, time periods, dates, etc.
+    - **topic** (Topic): Core themes, technical fields, industries, etc.
+    - **action** (Action): Operations, activities, event types, etc.
+    - **organization** (Organization): Companies, institutions, departments, etc.
+    - **product** (Product): Product names, service names, etc.
+
+    === Query Rewriting Principles ===
+    1. **Colloquial to Formal**:
+       - "I want to find about..." → "Search for..."
+       - "What things/which things" → "Specific content/related information"
+       - "Help me check" → Omit directly, keep core query content
+    2. **Vague to Specific**:
+       - "Recent news" → "Latest/recent/current news"
+       - "Related information" → "Related technical information/development information/application information"
+       - "Things about X" → "Technology/application/development trends about X"
+    3. **Preserve Core Semantics**: The rewritten query must maintain the core intent of the original query
+    4. **Improve Search Precision**: The rewritten query should be easier for search engines to understand and match
+
+    === Output Format (JSON) ===
+    ```json
+    {{
+      "attributes": [
+        {{
+          "name": "Attribute name",
+          "type": "Attribute type (person/location/time/topic/action, etc.)",
+          "context": "Context in the query",
+          "importance": "high/medium/low"
+        }}
+      ],
+      "rewritten_query": "Rewritten query text"
+    }}
+    ```
+
+    **Important Notes**:
+    1. The rewritten query should be more precise and search-friendly than the original
+    2. If the original query is already standard, it can remain unchanged
+    3. Ensure valid JSON format is returned
+    4. Attribute extraction and query rewriting should be based on the original query, maintaining consistency
