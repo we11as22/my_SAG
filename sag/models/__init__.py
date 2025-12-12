@@ -1,7 +1,7 @@
 """
-数据模型包
+Data models package
 
-导出所有数据模型
+Exports all data models
 """
 
 from sag.models.article import Article, ArticleCreate, ArticleSection, ArticleStatus

@@ -1,7 +1,7 @@
 """
-数据模型基类
+Data model base classes
 
-所有Pydantic模型的基类
+Base classes for all Pydantic models
 """
 
 from datetime import datetime
@@ -11,32 +11,32 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SAGBaseModel(BaseModel):
-    """SAG基础模型"""
+    """SAG base model"""
 
     model_config = ConfigDict(
-        # 允许ORM模式（从SQLAlchemy对象创建）
+        # Allow ORM mode (create from SQLAlchemy objects)
         from_attributes=True,
-        # 使用枚举值而非枚举对象
+        # Use enum values instead of enum objects
         use_enum_values=True,
-        # 验证赋值
+        # Validate assignment
         validate_assignment=True,
-        # 填充None的默认值
+        # Populate None default values
         populate_by_name=True,
     )
 
 
 class TimestampMixin(BaseModel):
-    """时间戳混入类"""
+    """Timestamp mixin class"""
 
-    created_time: datetime = Field(default_factory=datetime.now, description="创建时间")
-    updated_time: Optional[datetime] = Field(default=None, description="更新时间")
+    created_time: datetime = Field(default_factory=datetime.now, description="Creation time")
+    updated_time: Optional[datetime] = Field(default=None, description="Update time")
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class MetadataMixin(BaseModel):
-    """扩展数据混入类"""
+    """Extended data mixin class"""
 
-    extra_data: Optional[Dict[str, Any]] = Field(default=None, description="扩展数据(JSON)")
+    extra_data: Optional[Dict[str, Any]] = Field(default=None, description="Extended data (JSON)")
 
     model_config = ConfigDict(from_attributes=True)

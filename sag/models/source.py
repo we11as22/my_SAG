@@ -1,5 +1,5 @@
 """
-信息源配置数据模型
+Source configuration data models
 """
 
 from typing import Any, Dict, List, Optional
@@ -10,41 +10,41 @@ from sag.models.base import SAGBaseModel, MetadataMixin, TimestampMixin
 
 
 class SourceConfig(SAGBaseModel, MetadataMixin, TimestampMixin):
-    """信息源配置模型"""
+    """Source configuration model"""
 
-    id: str = Field(..., description="信息源配置ID (UUID)")
-    name: str = Field(..., min_length=1, max_length=100, description="信息源配置名称")
+    id: str = Field(..., description="Source configuration ID (UUID)")
+    name: str = Field(..., min_length=1, max_length=100, description="Source configuration name")
     description: Optional[str] = Field(
-        default=None, max_length=255, description="信息源配置描述"
+        default=None, max_length=255, description="Source configuration description"
     )
     config: Optional[Dict[str, Any]] = Field(
-        default=None, description='偏好设置，格式：{"focus": ["AI"], "language": "zh"}'
+        default=None, description='Preference settings, format: {"focus": ["AI"], "language": "zh"}'
     )
 
     def get_focus(self) -> List[str]:
-        """获取关注领域"""
+        """Get focus areas"""
         if self.config and "focus" in self.config:
             return self.config["focus"]
         return []
 
     def get_language(self) -> str:
-        """获取语言偏好"""
+        """Get language preference"""
         if self.config and "language" in self.config:
             return self.config["language"]
         return "zh"
 
 
 class SourceConfigCreate(SAGBaseModel):
-    """创建信息源配置请求"""
+    """Create source configuration request"""
 
-    name: str = Field(..., min_length=1, max_length=100, description="信息源配置名称")
-    description: Optional[str] = Field(default=None, max_length=255, description="信息源配置描述")
-    config: Optional[Dict[str, Any]] = Field(default=None, description="偏好设置")
+    name: str = Field(..., min_length=1, max_length=100, description="Source configuration name")
+    description: Optional[str] = Field(default=None, max_length=255, description="Source configuration description")
+    config: Optional[Dict[str, Any]] = Field(default=None, description="Preference settings")
 
 
 class SourceConfigUpdate(SAGBaseModel):
-    """更新信息源配置请求"""
+    """Update source configuration request"""
 
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="信息源配置名称")
-    description: Optional[str] = Field(default=None, max_length=255, description="信息源配置描述")
-    config: Optional[Dict[str, Any]] = Field(default=None, description="偏好设置")
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="Source configuration name")
+    description: Optional[str] = Field(default=None, max_length=255, description="Source configuration description")
+    config: Optional[Dict[str, Any]] = Field(default=None, description="Preference settings")

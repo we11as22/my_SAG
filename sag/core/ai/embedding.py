@@ -1,7 +1,7 @@
 """
-Embedding生成服务
+Embedding generation service
 
-提供统一的文本向量化能力，所有模块共享
+Provides unified text vectorization capability, shared by all modules
 """
 
 from typing import List, Optional
@@ -15,12 +15,12 @@ logger = get_logger("ai.embedding")
 
 class EmbeddingClient:
     """
-    Embedding客户端
+    Embedding client
     
-    统一的文本向量化服务，支持：
+    Unified text vectorization service, supports:
     - OpenAI Embedding API
-    - 自定义Embedding服务
-    - 本地Embedding模型（未来扩展）
+    - Custom Embedding services
+    - Local Embedding models (future extension)
     """
     
     def __init__(
@@ -30,12 +30,12 @@ class EmbeddingClient:
         api_key: Optional[str] = None
     ):
         """
-        初始化Embedding客户端
+        Initialize Embedding client
         
         Args:
-            model: 模型名称（默认从配置读取）
-            base_url: API地址（默认从配置读取）
-            api_key: API密钥（默认从配置读取）
+            model: Model name (default read from config)
+            base_url: API address (default read from config)
+            api_key: API key (default read from config)
         """
         from openai import AsyncOpenAI
         
@@ -43,10 +43,10 @@ class EmbeddingClient:
         
         self.model = model or settings.embedding_model_name
         self.base_url = base_url or settings.embedding_base_url or settings.llm_base_url
-        # ✅ 优先使用传入的 api_key，然后才是环境变量
+        # ✅ Prioritize passed api_key, then environment variables
         self.api_key = api_key or settings.embedding_api_key or settings.llm_api_key
         
-        # 初始化OpenAI客户端
+        # Initialize OpenAI client
         client_kwargs = {"api_key": self.api_key}
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
@@ -54,7 +54,7 @@ class EmbeddingClient:
         self.client = AsyncOpenAI(**client_kwargs)
         
         logger.info(
-            f"Embedding客户端初始化完成",
+            f"Embedding client initialized",
             extra={
                 "model": self.model,
                 "base_url": self.base_url or "default",
@@ -63,16 +63,16 @@ class EmbeddingClient:
     
     async def generate(self, text: str) -> List[float]:
         """
-        生成文本的embedding向量
+        Generate embedding vector for text
         
         Args:
-            text: 文本内容
+            text: Text content
             
         Returns:
-            embedding向量
+            Embedding vector
             
         Raises:
-            AIError: 生成失败
+            AIError: Generation failed
         """
         try:
             response = await self.client.embeddings.create(
@@ -83,7 +83,7 @@ class EmbeddingClient:
             embedding = response.data[0].embedding
             
             logger.debug(
-                f"生成embedding成功",
+                f"Embedding generation successful",
                 extra={
                     "text_length": len(text),
                     "vector_dim": len(embedding),
@@ -93,21 +93,21 @@ class EmbeddingClient:
             return embedding
             
         except Exception as e:
-            logger.error(f"生成embedding失败: {e}", exc_info=True)
-            raise AIError(f"生成embedding失败: {e}") from e
+            logger.error(f"Embedding generation failed: {e}", exc_info=True)
+            raise AIError(f"Embedding generation failed: {e}") from e
     
     async def batch_generate(self, texts: List[str]) -> List[List[float]]:
         """
-        批量生成embedding向量
+        Batch generate embedding vectors
         
         Args:
-            texts: 文本列表
+            texts: Text list
             
         Returns:
-            embedding向量列表
+            Embedding vector list
             
         Raises:
-            AIError: 生成失败
+            AIError: Generation failed
         """
         try:
             response = await self.client.embeddings.create(
@@ -118,7 +118,7 @@ class EmbeddingClient:
             embeddings = [item.embedding for item in response.data]
             
             logger.debug(
-                f"批量生成embedding成功",
+                f"Batch embedding generation successful",
                 extra={
                     "batch_size": len(texts),
                     "vector_dim": len(embeddings[0]) if embeddings else 0,
@@ -128,51 +128,51 @@ class EmbeddingClient:
             return embeddings
             
         except Exception as e:
-            logger.error(f"批量生成embedding失败: {e}", exc_info=True)
-            raise AIError(f"批量生成embedding失败: {e}") from e
+            logger.error(f"Batch embedding generation failed: {e}", exc_info=True)
+            raise AIError(f"Batch embedding generation failed: {e}") from e
 
 
-# 全局单例
+# Global singleton
 _embedding_client: Optional[EmbeddingClient] = None
 
 
 def get_embedding_client() -> EmbeddingClient:
     """
-    获取全局Embedding客户端（单例）- 同步版本
+    Get global Embedding client (singleton) - synchronous version
     
-    ⚠️ 警告：此函数仅用于纯同步环境（如测试脚本）
-    在异步环境中请使用 factory.get_embedding_client() 异步版本
+    ⚠️ Warning: This function is only for pure synchronous environments (e.g., test scripts)
+    In async environments, please use factory.get_embedding_client() async version
     
-    此函数不使用配置管理，仅从环境变量读取配置
+    This function does not use configuration management, only reads from environment variables
     
-    推荐使用：
-    - factory.get_embedding_client(scenario='general') - 异步版本，支持配置管理
+    Recommended usage:
+    - factory.get_embedding_client(scenario='general') - async version, supports configuration management
     
     Returns:
-        EmbeddingClient实例
+        EmbeddingClient instance
     """
     global _embedding_client
     if _embedding_client is None:
-        # 简单创建，从环境变量读取配置（不使用 factory 的配置管理）
+        # Simple creation, read config from environment variables (does not use factory's config management)
         _embedding_client = EmbeddingClient()
     return _embedding_client
 
 
 def reset_embedding_client() -> None:
-    """重置全局Embedding客户端"""
+    """Reset global Embedding client"""
     global _embedding_client
     _embedding_client = None
 
 
 async def generate_embedding(text: str) -> List[float]:
     """
-    生成embedding的便捷函数
+    Convenience function to generate embedding
     
     Args:
-        text: 文本内容
+        text: Text content
         
     Returns:
-        embedding向量
+        Embedding vector
     """
     client = get_embedding_client()
     return await client.generate(text)
@@ -180,13 +180,13 @@ async def generate_embedding(text: str) -> List[float]:
 
 async def batch_generate_embedding(texts: List[str]) -> List[List[float]]:
     """
-    批量生成embedding的便捷函数
+    Convenience function to batch generate embeddings
     
     Args:
-        texts: 文本列表
+        texts: Text list
         
     Returns:
-        embedding向量列表
+        Embedding vector list
     """
     client = get_embedding_client()
     return await client.batch_generate(texts)

@@ -1,7 +1,7 @@
 """
-LLM客户端基类
+LLM client base class
 
-定义LLM客户端的统一接口
+Defines the unified interface for LLM clients
 """
 
 import asyncio
@@ -16,18 +16,18 @@ logger = get_logger("ai.llm")
 
 
 class BaseLLMClient(ABC):
-    """LLM客户端基类"""
+    """LLM client base class"""
 
     def __init__(self, config: ModelConfig) -> None:
         """
-        初始化LLM客户端
+        Initialize LLM client
 
         Args:
-            config: LLM配置
+            config: LLM configuration
         """
         self.config = config
         logger.info(
-            "初始化%s客户端",
+            "Initializing %s client",
             config.provider.value,
             extra={"model": config.model},
         )
@@ -41,20 +41,20 @@ class BaseLLMClient(ABC):
         **kwargs: Any,
     ) -> LLMResponse:
         """
-        聊天补全
+        Chat completion
 
         Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大输出token数
-            **kwargs: 其他参数
+            messages: Message list
+            temperature: Temperature parameter
+            max_tokens: Maximum output tokens
+            **kwargs: Other parameters
 
         Returns:
-            LLM响应
+            LLM response
 
         Raises:
-            LLMError: LLM调用失败
-            LLMTimeoutError: 调用超时
+            LLMError: LLM call failed
+            LLMTimeoutError: Call timeout
         """
         ...
 
@@ -68,21 +68,21 @@ class BaseLLMClient(ABC):
         **kwargs: Any,
     ) -> AsyncIterator[tuple[str, Optional[str]]]:
         """
-        流式聊天补全
+        Streaming chat completion
 
         Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大输出token数
-            include_reasoning: 是否返回推理内容（reasoning_content）
-            **kwargs: 其他参数
+            messages: Message list
+            temperature: Temperature parameter
+            max_tokens: Maximum output tokens
+            include_reasoning: Whether to return reasoning content (reasoning_content)
+            **kwargs: Other parameters
 
         Yields:
-            元组 (content, reasoning) - content为内容片段，reasoning为推理片段（如果有）
+            Tuple (content, reasoning) - content is content fragment, reasoning is reasoning fragment (if any)
 
         Raises:
-            LLMError: LLM调用失败
-            LLMTimeoutError: 调用超时
+            LLMError: LLM call failed
+            LLMTimeoutError: Call timeout
         """
         ...
 
@@ -95,75 +95,75 @@ class BaseLLMClient(ABC):
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
-        结构化输出（JSON Schema）
+        Structured output (JSON Schema)
 
         Args:
-            messages: 消息列表
-            response_schema: JSON Schema定义（可选，如果不提供则只验证JSON格式）
-            temperature: 温度参数
-            max_tokens: 最大输出token数
-            **kwargs: 其他参数
+            messages: Message list
+            response_schema: JSON Schema definition (optional, if not provided only validates JSON format)
+            temperature: Temperature parameter
+            max_tokens: Maximum output tokens
+            **kwargs: Other parameters
 
         Returns:
-            解析后的JSON对象
+            Parsed JSON object
 
         Raises:
-            LLMError: LLM调用失败或JSON格式无效
-            ValidationError: 响应不符合Schema（仅当提供schema时）
+            LLMError: LLM call failed or invalid JSON format
+            ValidationError: Response does not match Schema (only when schema is provided)
         """
         import json
 
-        # 构建提示词
+        # Build prompt
         if response_schema:
-            # 有schema: 添加详细的schema要求
-            schema_prompt = f"""请按照以下 JSON Schema 返回数据：
+            # Has schema: add detailed schema requirements
+            schema_prompt = f"""Please return data according to the following JSON Schema:
 
                 {json.dumps(response_schema, ensure_ascii=False, indent=2)}
 
-**输出格式**：
+**Output Format**:
                 ```json
                 {{
   "your": "data"
                 }}
                 ```
 
-**重要**：你的输出会被 Python 的 json.loads() 解析，请确保：
-1. 在 JSON 字符串中，反斜杠 \\ 要写成 \\\\（双反斜杠）
-2. 例如：LaTeX 公式 \\( A^* \\) 在 JSON 中写成 "\\\\( A^* \\\\)"
-3. 完整示例：{{"content": "证明 \\\\( A^* \\\\) 算法效率更优"}}
+**Important**: Your output will be parsed by Python's json.loads(), please ensure:
+1. In JSON strings, backslashes \\ must be written as \\\\ (double backslash)
+2. For example: LaTeX formula \\( A^* \\) in JSON should be written as "\\\\( A^* \\\\)"
+3. Complete example: {{"content": "Prove \\\\( A^* \\\\) algorithm is more efficient"}}
 
-只返回 JSON，不要其他解释。
+Return only JSON, no other explanations.
             """
         else:
-            # 无schema: 只要求返回JSON格式
-            schema_prompt = """请返回 JSON 格式数据，用 ```json 代码块包裹。
+            # No schema: only require JSON format
+            schema_prompt = """Please return JSON format data, wrapped in ```json code block.
 
-**重要**：JSON 字符串中的反斜杠 \\ 必须写成 \\\\（双反斜杠）
-例如：{{"text": "\\\\( formula \\\\)"}}
+**Important**: Backslashes \\ in JSON strings must be written as \\\\ (double backslash)
+For example: {{"text": "\\\\( formula \\\\)"}}
 """
 
-        # 添加schema提示到消息列表
+        # Add schema prompt to message list
         enhanced_messages = [
             LLMMessage(role=LLMRole.SYSTEM, content=schema_prompt),
             *messages,
         ]
 
-        # 调用LLM（参数从配置读取，不硬编码）
+        # Call LLM (parameters read from config, not hardcoded)
         response = await self.chat(
             enhanced_messages,
-            temperature=temperature,  # 不硬编码，使用传入值或配置默认值
-            max_tokens=max_tokens,    # 不硬编码，使用传入值或配置默认值
+            temperature=temperature,  # Not hardcoded, use passed value or config default
+            max_tokens=max_tokens,    # Not hardcoded, use passed value or config default
             **kwargs,
         )
 
-        # 解析JSON响应
+        # Parse JSON response
         try:
             import re
             
-            # 提取JSON内容（可能被markdown代码块包裹）
+            # Extract JSON content (may be wrapped in markdown code block)
             content = response.content.strip()
             
-            # 使用正则表达式提取 ```json 或 ``` 代码块
+            # Use regex to extract ```json or ``` code block
             json_block_match = re.search(
                 r'```(?:json)?\s*\n(.*?)\n```', 
                 content, 
@@ -172,66 +172,66 @@ class BaseLLMClient(ABC):
             
             if json_block_match:
                 content = json_block_match.group(1).strip()
-                logger.debug("从 markdown 代码块中提取 JSON")
+                logger.debug("Extracted JSON from markdown code block")
             else:
-                logger.debug("直接解析 JSON（无代码块）")
+                logger.debug("Directly parsing JSON (no code block)")
 
-            # 解析JSON
+            # Parse JSON
             result = json.loads(content)
 
-            # 如果提供了schema，进行验证
+            # If schema is provided, validate
             if response_schema:
-                # 尝试使用jsonschema进行严格验证
+                # Try strict validation with jsonschema
                 try:
                     import jsonschema
 
                     jsonschema.validate(instance=result, schema=response_schema)
                     logger.debug("JSON schema validation passed")
                 except ImportError:
-                    # jsonschema未安装，使用简单验证
+                    # jsonschema not installed, use simple validation
                     if "properties" in response_schema:
                         required = response_schema.get("required", [])
                         for field in required:
                             if field not in result:
-                                raise ValueError(f"缺少必需字段: {field}")
+                                raise ValueError(f"Missing required field: {field}")
                     logger.debug("JSON simple validation passed")
                 except Exception as e:
-                    # jsonschema验证失败
+                    # jsonschema validation failed
                     if type(e).__name__ == "ValidationError":
                         logger.error("JSON schema validation failed: %s", e)
-                        raise LLMError(f"响应不符合Schema: {e}") from e
+                        raise LLMError(f"Response does not match Schema: {e}") from e
                     raise
             else:
-                # 没有schema，只验证JSON格式（已通过json.loads）
+                # No schema, only validate JSON format (already passed json.loads)
                 logger.debug("JSON format validation passed (no schema provided)")
 
             return result
 
         except json.JSONDecodeError as e:
-            logger.error("JSON解析失败: %s\n内容: %s", e, response.content)
-            raise LLMError(f"LLM返回的不是有效的JSON: {e}") from e
+            logger.error("JSON parsing failed: %s\nContent: %s", e, response.content)
+            raise LLMError(f"LLM returned invalid JSON: {e}") from e
         except ValueError as e:
-            logger.error("Schema验证失败: %s", e)
-            raise LLMError(f"响应不符合Schema: {e}") from e
+            logger.error("Schema validation failed: %s", e)
+            raise LLMError(f"Response does not match Schema: {e}") from e
 
     def _prepare_messages(
         self,
         messages: List[LLMMessage],
     ) -> List[Dict[str, str]]:
         """
-        准备消息列表（转换为API格式）
+        Prepare message list (convert to API format)
 
         Args:
-            messages: 消息列表
+            messages: Message list
 
         Returns:
-            API格式的消息列表
+            Message list in API format
         """
         return [msg.to_dict() for msg in messages]
 
 
 class LLMRetryClient:
-    """带重试机制的LLM客户端包装器"""
+    """LLM client wrapper with retry mechanism"""
 
     def __init__(
         self,
@@ -241,13 +241,13 @@ class LLMRetryClient:
         backoff_factor: float = 2.0,
     ) -> None:
         """
-        初始化重试客户端
+        Initialize retry client
 
         Args:
-            client: 基础LLM客户端
-            max_retries: 最大重试次数（None则使用client配置）
-            retry_delay: 初始重试延迟（秒）
-            backoff_factor: 退避因子
+            client: Base LLM client
+            max_retries: Maximum retry count (None uses client config)
+            retry_delay: Initial retry delay (seconds)
+            backoff_factor: Backoff factor
         """
         self.client = client
         self.max_retries = max_retries or client.config.max_retries
@@ -256,29 +256,29 @@ class LLMRetryClient:
 
     def _should_retry(self, error: Exception) -> bool:
         """
-        判断错误是否应该重试
+        Determine if error should be retried
 
         Args:
-            error: 异常对象
+            error: Exception object
 
         Returns:
-            True表示应该重试，False表示不应该重试
+            True means should retry, False means should not retry
         """
-        # 超时错误不重试（网络问题，重试可能继续超时）
+        # Timeout errors don't retry (network issues, retry may continue to timeout)
         if isinstance(error, LLMTimeoutError):
             return False
 
-        # 速率限制错误应该重试
+        # Rate limit errors should retry
         from sag.exceptions import LLMRateLimitError
 
         if isinstance(error, LLMRateLimitError):
             return True
 
-        # 其他LLM错误可以重试
+        # Other LLM errors can retry
         if isinstance(error, LLMError):
             return True
 
-        # 未知错误默认不重试
+        # Unknown errors default to no retry
         return False
 
     async def chat(
@@ -287,17 +287,17 @@ class LLMRetryClient:
         **kwargs: Any,
     ) -> LLMResponse:
         """
-        带重试的聊天补全
+        Chat completion with retry
 
-        实现指数退避重试策略：
-        - 第1次失败：等待1秒
-        - 第2次失败：等待2秒
-        - 第3次失败：等待4秒
+        Implements exponential backoff retry strategy:
+        - 1st failure: wait 1 second
+        - 2nd failure: wait 2 seconds
+        - 3rd failure: wait 4 seconds
 
-        根据错误类型智能决定是否重试：
-        - 超时错误：不重试
-        - 速率限制：重试
-        - 其他LLM错误：重试
+        Intelligently decides whether to retry based on error type:
+        - Timeout errors: don't retry
+        - Rate limit: retry
+        - Other LLM errors: retry
         """
         last_error: Optional[Exception] = None
         delay = self.retry_delay
@@ -308,14 +308,14 @@ class LLMRetryClient:
             except Exception as e:
                 last_error = e
 
-                # 判断是否应该重试
+                # Determine if should retry
                 if not self._should_retry(e):
-                    logger.error("遇到不可重试错误: %s", e)
+                    logger.error("Encountered non-retryable error: %s", e)
                     raise
 
                 if attempt < self.max_retries:
                     logger.warning(
-                        "LLM调用失败，%s秒后重试 (尝试 %d/%d)",
+                        "LLM call failed, retrying in %s seconds (attempt %d/%d)",
                         delay,
                         attempt + 1,
                         self.max_retries,
@@ -325,12 +325,12 @@ class LLMRetryClient:
                     delay *= self.backoff_factor
                 else:
                     logger.error(
-                        "LLM调用失败，已重试%d次",
+                        "LLM call failed, retried %d times",
                         self.max_retries,
                         exc_info=True,
                     )
 
-        raise LLMError(f"LLM调用失败，已重试{self.max_retries}次") from last_error
+        raise LLMError(f"LLM call failed, retried {self.max_retries} times") from last_error
 
     async def chat_stream(
         self,
@@ -338,12 +338,12 @@ class LLMRetryClient:
         **kwargs: Any,
     ) -> AsyncIterator[tuple[str, Optional[str]]]:
         """
-        流式调用（不重试）
+        Streaming call (no retry)
 
-        流式调用失败时无法重试，直接抛出异常
+        Streaming calls cannot be retried on failure, directly raise exception
 
         Yields:
-            元组 (content, reasoning) - content为内容片段，reasoning为推理片段（如果有）
+            Tuple (content, reasoning) - content is content fragment, reasoning is reasoning fragment (if any)
         """
         async for chunk in self.client.chat_stream(messages, **kwargs):
             yield chunk
@@ -355,9 +355,9 @@ class LLMRetryClient:
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
-        带重试的结构化输出
+        Structured output with retry
 
-        根据错误类型智能决定是否重试
+        Intelligently decides whether to retry based on error type
         """
         last_error: Optional[Exception] = None
         delay = self.retry_delay
@@ -372,14 +372,14 @@ class LLMRetryClient:
             except Exception as e:
                 last_error = e
 
-                # 判断是否应该重试
+                # Determine if should retry
                 if not self._should_retry(e):
-                    logger.error("遇到不可重试错误: %s", e)
+                    logger.error("Encountered non-retryable error: %s", e)
                     raise
 
                 if attempt < self.max_retries:
                     logger.warning(
-                        "结构化输出失败，%s秒后重试 (尝试 %d/%d)",
+                        "Structured output failed, retrying in %s seconds (attempt %d/%d)",
                         delay,
                         attempt + 1,
                         self.max_retries,
@@ -388,4 +388,4 @@ class LLMRetryClient:
                     await asyncio.sleep(delay)
                     delay *= self.backoff_factor
 
-        raise LLMError(f"结构化输出失败，已重试{self.max_retries}次") from last_error
+        raise LLMError(f"Structured output failed, retried {self.max_retries} times") from last_error

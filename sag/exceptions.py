@@ -1,12 +1,12 @@
 """
-SAG 异常定义
+SAG exception definitions
 
-所有自定义异常都继承自SAGError基类
+All custom exceptions inherit from SAGError base class
 """
 
 
 class SAGError(Exception):
-    """SAG基础异常类"""
+    """SAG base exception class"""
 
     def __init__(self, message: str, *args: object) -> None:
         self.message = message
@@ -14,84 +14,84 @@ class SAGError(Exception):
 
 
 class ConfigError(SAGError):
-    """配置错误异常"""
+    """Configuration error exception"""
 
     pass
 
 
 class StorageError(SAGError):
-    """存储层异常"""
+    """Storage layer exception"""
 
     pass
 
 
 class DatabaseError(StorageError):
-    """数据库异常"""
+    """Database exception"""
 
     pass
 
 
 class CacheError(StorageError):
-    """缓存异常"""
+    """Cache exception"""
 
     pass
 
 
 class LLMError(SAGError):
-    """LLM调用异常"""
+    """LLM call exception"""
 
     pass
 
 
 class LLMTimeoutError(LLMError):
-    """LLM调用超时异常"""
+    """LLM call timeout exception"""
 
     pass
 
 
 class LLMRateLimitError(LLMError):
-    """LLM速率限制异常"""
+    """LLM rate limit exception"""
 
     pass
 
 
 class AIError(SAGError):
-    """AI相关异常（包括LLM和Embedding）"""
+    """AI-related exception (including LLM and Embedding)"""
 
     pass
 
 
 class ValidationError(SAGError):
-    """数据验证异常"""
+    """Data validation exception"""
 
     pass
 
 
 class LoadError(SAGError):
-    """文档加载异常"""
+    """Document loading exception"""
 
     pass
 
 
 class EntityError(SAGError):
-    """实体处理异常"""
+    """Entity processing exception"""
 
     pass
 
 
 class ExtractError(SAGError):
-    """事项提取异常"""
+    """Event extraction exception"""
 
     pass
 
 
 class SearchError(SAGError):
-    """检索异常"""
+    """Search exception"""
 
     pass
 
 
 class PromptError(SAGError):
-    """提示词异常"""
+    """Prompt exception"""
 
     pass

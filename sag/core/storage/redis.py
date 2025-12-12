@@ -1,7 +1,7 @@
 """
-Redis 缓存客户端
+Redis cache client
 
-支持字符串、哈希、集合等数据结构
+Supports string, hash, set and other data structures
 """
 
 import json
@@ -17,7 +17,7 @@ logger = get_logger("storage.redis")
 
 
 class RedisClient:
-    """Redis异步客户端"""
+    """Redis async client"""
 
     def __init__(
         self,
@@ -28,14 +28,14 @@ class RedisClient:
         **kwargs: Any,
     ) -> None:
         """
-        初始化Redis客户端
+        Initialize Redis client
 
         Args:
-            host: Redis主机
-            port: Redis端口
-            password: Redis密码
-            db: 数据库编号
-            **kwargs: 其他参数
+            host: Redis host
+            port: Redis port
+            password: Redis password
+            db: Database number
+            **kwargs: Other parameters
         """
         settings = get_settings()
 
@@ -44,13 +44,13 @@ class RedisClient:
         self.password = password or settings.redis_password
         self.db = db or settings.redis_db
 
-        # 构建连接URL
+        # Build connection URL
         if self.password:
             url = f"redis://:{self.password}@{self.host}:{self.port}/{self.db}"
         else:
             url = f"redis://{self.host}:{self.port}/{self.db}"
 
-        # 创建客户端
+        # Create client
         self.client = aioredis.from_url(
             url,
             encoding="utf-8",
@@ -59,19 +59,19 @@ class RedisClient:
         )
 
         logger.info(
-            "Redis客户端初始化完成",
+            "Redis client initialized",
             extra={"host": self.host, "port": self.port, "db": self.db},
         )
 
     async def get(self, key: str) -> Optional[Any]:
         """
-        获取缓存值
+        Get cache value
 
         Args:
-            key: 键
+            key: Key
 
         Returns:
-            值（JSON反序列化），不存在返回None
+            Value (JSON deserialized), None if not exists
         """
         try:
             value = await self.client.get(key)
@@ -79,11 +79,11 @@ class RedisClient:
                 return None
             return json.loads(value)
         except json.JSONDecodeError:
-            # 如果不是JSON，直接返回字符串
+            # If not JSON, return string directly
             return value
         except Exception as e:
-            logger.error(f"获取缓存失败: {e}", exc_info=True)
-            raise CacheError(f"获取缓存失败: {e}") from e
+            logger.error(f"Get cache failed: {e}", exc_info=True)
+            raise CacheError(f"Get cache failed: {e}") from e
 
     async def set(
         self,
@@ -92,120 +92,120 @@ class RedisClient:
         expire: Optional[int] = None,
     ) -> bool:
         """
-        设置缓存值
+        Set cache value
 
         Args:
-            key: 键
-            value: 值（自动JSON序列化）
-            expire: 过期时间（秒）
+            key: Key
+            value: Value (auto JSON serialized)
+            expire: Expiration time (seconds)
 
         Returns:
-            设置成功返回True
+            True if set successfully
         """
         try:
-            # JSON序列化
+            # JSON serialization
             if not isinstance(value, str):
                 value = json.dumps(value, ensure_ascii=False)
 
             await self.client.set(key, value, ex=expire)
             return True
         except Exception as e:
-            logger.error(f"设置缓存失败: {e}", exc_info=True)
-            raise CacheError(f"设置缓存失败: {e}") from e
+            logger.error(f"Set cache failed: {e}", exc_info=True)
+            raise CacheError(f"Set cache failed: {e}") from e
 
     async def delete(self, key: str) -> bool:
         """
-        删除缓存
+        Delete cache
 
         Args:
-            key: 键
+            key: Key
 
         Returns:
-            删除成功返回True
+            True if deleted successfully
         """
         try:
             result = await self.client.delete(key)
             return result > 0
         except Exception as e:
-            logger.error(f"删除缓存失败: {e}", exc_info=True)
-            raise CacheError(f"删除缓存失败: {e}") from e
+            logger.error(f"Delete cache failed: {e}", exc_info=True)
+            raise CacheError(f"Delete cache failed: {e}") from e
 
     async def exists(self, key: str) -> bool:
         """
-        检查键是否存在
+        Check if key exists
 
         Args:
-            key: 键
+            key: Key
 
         Returns:
-            存在返回True
+            True if exists
         """
         try:
             return bool(await self.client.exists(key))
         except Exception as e:
-            logger.error(f"检查缓存存在失败: {e}", exc_info=True)
+            logger.error(f"Check cache existence failed: {e}", exc_info=True)
             return False
 
     async def expire(self, key: str, seconds: int) -> bool:
         """
-        设置过期时间
+        Set expiration time
 
         Args:
-            key: 键
-            seconds: 秒数
+            key: Key
+            seconds: Seconds
 
         Returns:
-            设置成功返回True
+            True if set successfully
         """
         try:
             return bool(await self.client.expire(key, seconds))
         except Exception as e:
-            logger.error(f"设置过期时间失败: {e}", exc_info=True)
+            logger.error(f"Set expiration time failed: {e}", exc_info=True)
             return False
 
     async def ttl(self, key: str) -> int:
         """
-        获取剩余过期时间
+        Get remaining expiration time
 
         Args:
-            key: 键
+            key: Key
 
         Returns:
-            剩余秒数，-1表示永不过期，-2表示不存在
+            Remaining seconds, -1 means never expires, -2 means not exists
         """
         try:
             return await self.client.ttl(key)
         except Exception as e:
-            logger.error(f"获取TTL失败: {e}", exc_info=True)
+            logger.error(f"Get TTL failed: {e}", exc_info=True)
             return -2
 
     async def incr(self, key: str, amount: int = 1) -> int:
         """
-        递增计数器
+        Increment counter
 
         Args:
-            key: 键
-            amount: 增量
+            key: Key
+            amount: Increment amount
 
         Returns:
-            递增后的值
+            Value after increment
         """
         try:
             return await self.client.incrby(key, amount)
         except Exception as e:
-            logger.error(f"递增计数器失败: {e}", exc_info=True)
-            raise CacheError(f"递增计数器失败: {e}") from e
+            logger.error(f"Increment counter failed: {e}", exc_info=True)
+            raise CacheError(f"Increment counter failed: {e}") from e
 
     async def hget(self, name: str, key: str) -> Optional[Any]:
         """
-        获取哈希字段值
+        Get hash field value
 
         Args:
-            name: 哈希名称
-            key: 字段键
+            name: Hash name
+            key: Field key
 
         Returns:
-            字段值
+            Field value
         """
         try:
             value = await self.client.hget(name, key)
@@ -215,8 +215,8 @@ class RedisClient:
         except json.JSONDecodeError:
             return value
         except Exception as e:
-            logger.error(f"获取哈希字段失败: {e}", exc_info=True)
-            raise CacheError(f"获取哈希字段失败: {e}") from e
+            logger.error(f"Get hash field failed: {e}", exc_info=True)
+            raise CacheError(f"Get hash field failed: {e}") from e
 
     async def hset(
         self,
@@ -225,15 +225,15 @@ class RedisClient:
         value: Any,
     ) -> bool:
         """
-        设置哈希字段值
+        Set hash field value
 
         Args:
-            name: 哈希名称
-            key: 字段键
-            value: 字段值
+            name: Hash name
+            key: Field key
+            value: Field value
 
         Returns:
-            设置成功返回True
+            True if set successfully
         """
         try:
             if not isinstance(value, str):
@@ -241,122 +241,122 @@ class RedisClient:
             await self.client.hset(name, key, value)
             return True
         except Exception as e:
-            logger.error(f"设置哈希字段失败: {e}", exc_info=True)
-            raise CacheError(f"设置哈希字段失败: {e}") from e
+            logger.error(f"Set hash field failed: {e}", exc_info=True)
+            raise CacheError(f"Set hash field failed: {e}") from e
 
     async def hdel(self, name: str, *keys: str) -> int:
         """
-        删除哈希字段
+        Delete hash fields
 
         Args:
-            name: 哈希名称
-            *keys: 字段键列表
+            name: Hash name
+            *keys: Field key list
 
         Returns:
-            删除的字段数量
+            Number of deleted fields
         """
         try:
             return await self.client.hdel(name, *keys)
         except Exception as e:
-            logger.error(f"删除哈希字段失败: {e}", exc_info=True)
-            raise CacheError(f"删除哈希字段失败: {e}") from e
+            logger.error(f"Delete hash fields failed: {e}", exc_info=True)
+            raise CacheError(f"Delete hash fields failed: {e}") from e
 
     async def hgetall(self, name: str) -> dict:
         """
-        获取哈希所有字段
+        Get all hash fields
 
         Args:
-            name: 哈希名称
+            name: Hash name
 
         Returns:
-            字段字典
+            Field dictionary
         """
         try:
             return await self.client.hgetall(name)
         except Exception as e:
-            logger.error(f"获取哈希所有字段失败: {e}", exc_info=True)
-            raise CacheError(f"获取哈希所有字段失败: {e}") from e
+            logger.error(f"Get all hash fields failed: {e}", exc_info=True)
+            raise CacheError(f"Get all hash fields failed: {e}") from e
 
     async def sadd(self, name: str, *values: Any) -> int:
         """
-        添加集合成员
+        Add set members
 
         Args:
-            name: 集合名称
-            *values: 成员值列表
+            name: Set name
+            *values: Member value list
 
         Returns:
-            添加的成员数量
+            Number of added members
         """
         try:
             return await self.client.sadd(name, *values)
         except Exception as e:
-            logger.error(f"添加集合成员失败: {e}", exc_info=True)
-            raise CacheError(f"添加集合成员失败: {e}") from e
+            logger.error(f"Add set members failed: {e}", exc_info=True)
+            raise CacheError(f"Add set members failed: {e}") from e
 
     async def smembers(self, name: str) -> List[str]:
         """
-        获取集合所有成员
+        Get all set members
 
         Args:
-            name: 集合名称
+            name: Set name
 
         Returns:
-            成员列表
+            Member list
         """
         try:
             members = await self.client.smembers(name)
             return list(members)
         except Exception as e:
-            logger.error(f"获取集合成员失败: {e}", exc_info=True)
-            raise CacheError(f"获取集合成员失败: {e}") from e
+            logger.error(f"Get set members failed: {e}", exc_info=True)
+            raise CacheError(f"Get set members failed: {e}") from e
 
     async def sismember(self, name: str, value: Any) -> bool:
         """
-        检查是否是集合成员
+        Check if is set member
 
         Args:
-            name: 集合名称
-            value: 成员值
+            name: Set name
+            value: Member value
 
         Returns:
-            是成员返回True
+            True if is member
         """
         try:
             return bool(await self.client.sismember(name, value))
         except Exception as e:
-            logger.error(f"检查集合成员失败: {e}", exc_info=True)
+            logger.error(f"Check set member failed: {e}", exc_info=True)
             return False
 
     async def close(self) -> None:
-        """关闭Redis连接"""
+        """Close Redis connection"""
         await self.client.close()
-        logger.info("Redis连接已关闭")
+        logger.info("Redis connection closed")
 
     async def ping(self) -> bool:
         """
-        测试连接
+        Test connection
 
         Returns:
-            连接成功返回True
+            True if connection successful
         """
         try:
             return await self.client.ping()
         except Exception as e:
-            logger.error(f"Redis连接测试失败: {e}")
+            logger.error(f"Redis connection test failed: {e}")
             return False
 
 
-# 全局客户端实例（单例）
+# Global client instance (singleton)
 _redis_client: Optional[RedisClient] = None
 
 
 def get_redis_client() -> RedisClient:
     """
-    获取Redis客户端单例
+    Get Redis client singleton
 
     Returns:
-        RedisClient实例
+        RedisClient instance
     """
     global _redis_client
     if _redis_client is None:
@@ -365,7 +365,7 @@ def get_redis_client() -> RedisClient:
 
 
 async def close_redis_client() -> None:
-    """关闭全局Redis客户端"""
+    """Close global Redis client"""
     global _redis_client
     if _redis_client is not None:
         await _redis_client.close()

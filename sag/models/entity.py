@@ -1,5 +1,5 @@
 """
-实体数据模型
+Entity data models
 """
 
 from datetime import datetime
@@ -12,74 +12,74 @@ from sag.models.base import SAGBaseModel, MetadataMixin, TimestampMixin
 
 
 class EntityType(SAGBaseModel, MetadataMixin, TimestampMixin):
-    """实体类型定义模型"""
+    """Entity type definition model"""
 
-    id: str = Field(..., description="实体类型ID (UUID)")
+    id: str = Field(..., description="Entity type ID (UUID)")
     scope: str = Field(
-        default="global", description="应用范围：global/source/article")
+        default="global", description="Application scope: global/source/article")
     source_config_id: Optional[str] = Field(
-        default=None, description="信息源ID (NULL表示系统默认类型)")
+        default=None, description="Source ID (NULL means system default type)")
     article_id: Optional[str] = Field(
-        default=None, description="文档ID（仅 scope=article 时有值）")
-    type: str = Field(..., min_length=1, max_length=50, description="类型标识符")
-    name: str = Field(..., min_length=1, max_length=100, description="类型名称")
-    is_default: bool = Field(default=False, description="是否为系统默认类型")
-    description: Optional[str] = Field(default=None, description="类型描述")
-    weight: float = Field(default=1.0, ge=0.0, le=9.99, description="默认权重")
+        default=None, description="Document ID (only has value when scope=article)")
+    type: str = Field(..., min_length=1, max_length=50, description="Type identifier")
+    name: str = Field(..., min_length=1, max_length=100, description="Type name")
+    is_default: bool = Field(default=False, description="Whether it is a system default type")
+    description: Optional[str] = Field(default=None, description="Type description")
+    weight: float = Field(default=1.0, ge=0.0, le=9.99, description="Default weight")
     similarity_threshold: float = Field(
-        default=0.80, ge=0.0, le=1.0, description="实体相似度匹配阈值（0.000-1.000）"
+        default=0.80, ge=0.0, le=1.0, description="Entity similarity matching threshold (0.000-1.000)"
     )
-    is_active: bool = Field(default=True, description="是否启用")
+    is_active: bool = Field(default=True, description="Whether enabled")
     value_format: Optional[str] = Field(
-        default=None, description="值格式模板（如 {number}{unit}）")
+        default=None, description="Value format template (e.g., {number}{unit})")
     value_constraints: Optional[Dict[str, Any]] = Field(
-        default=None, description="值约束（如枚举列表、数值范围）")
+        default=None, description="Value constraints (e.g., enum list, numeric range)")
 
     @field_validator("weight")
     @classmethod
     def validate_weight(cls, v: float) -> float:
-        """验证权重范围"""
+        """Validate weight range"""
         return round(v, 2)
 
     @field_validator("similarity_threshold")
     @classmethod
     def validate_similarity_threshold(cls, v: float) -> float:
-        """验证相似度阈值范围并保留3位小数"""
+        """Validate similarity threshold range and keep 3 decimal places"""
         return round(v, 3)
 
 
 class Entity(SAGBaseModel, MetadataMixin, TimestampMixin):
-    """实体模型（多对多关系：通过 event_entity 关联表与事项关联）"""
+    """Entity model (many-to-many relationship: associated with events through event_entity junction table)"""
 
-    id: str = Field(..., description="实体ID (UUID)")
-    source_config_id: str = Field(..., description="信息源ID")
-    entity_type_id: str = Field(..., description="实体类型ID（引用entity_type.id）")
+    id: str = Field(..., description="Entity ID (UUID)")
+    source_config_id: str = Field(..., description="Source ID")
+    entity_type_id: str = Field(..., description="Entity type ID (references entity_type.id)")
     type: str = Field(
-        ..., min_length=1, max_length=50, description="实体类型标识符（冗余字段，便于查询）"
+        ..., min_length=1, max_length=50, description="Entity type identifier (redundant field for easy querying)"
     )
-    name: str = Field(..., min_length=1, max_length=500, description="实体名称")
+    name: str = Field(..., min_length=1, max_length=500, description="Entity name")
     normalized_name: str = Field(..., min_length=1,
-                                 max_length=500, description="标准化名称")
-    description: Optional[str] = Field(default=None, description="实体描述")
+                                 max_length=500, description="Normalized name")
+    description: Optional[str] = Field(default=None, description="Entity description")
 
-    # ========== 类型化值字段（用于统计分析） ==========
+    # ========== Typed value fields (for statistical analysis) ==========
     value_type: Optional[str] = Field(
-        default=None, description="值类型（int/float/datetime/bool/enum/text）")
+        default=None, description="Value type (int/float/datetime/bool/enum/text)")
     value_raw: Optional[str] = Field(
-        default=None, description="原始提取文本（如 '199元'）")
-    int_value: Optional[int] = Field(default=None, description="整数值")
-    float_value: Optional[Decimal] = Field(default=None, description="浮点数值")
+        default=None, description="Raw extracted text (e.g., '199元')")
+    int_value: Optional[int] = Field(default=None, description="Integer value")
+    float_value: Optional[Decimal] = Field(default=None, description="Float value")
     datetime_value: Optional[datetime] = Field(
-        default=None, description="日期时间值")
-    bool_value: Optional[bool] = Field(default=None, description="布尔值")
-    enum_value: Optional[str] = Field(default=None, description="枚举值")
+        default=None, description="Datetime value")
+    bool_value: Optional[bool] = Field(default=None, description="Boolean value")
+    enum_value: Optional[str] = Field(default=None, description="Enum value")
     value_unit: Optional[str] = Field(
-        default=None, description="单位（如 '元', '美元'）")
+        default=None, description="Unit (e.g., 'Yuan', 'USD')")
     value_confidence: Optional[Decimal] = Field(
-        default=None, ge=0.0, le=1.0, description="解析置信度")
+        default=None, ge=0.0, le=1.0, description="Parsing confidence")
 
     def get_typed_value(self) -> Any:
-        """根据 value_type 获取对应的类型化值"""
+        """Get corresponding typed value based on value_type"""
         if self.value_type == "int":
             return self.int_value
         elif self.value_type == "float":
@@ -93,7 +93,7 @@ class Entity(SAGBaseModel, MetadataMixin, TimestampMixin):
         return None
 
     def get_synonyms(self) -> List[str]:
-        """获取同义词"""
+        """Get synonyms"""
         if self.extra_data and "synonyms" in self.extra_data:
             return self.extra_data["synonyms"]
         return []

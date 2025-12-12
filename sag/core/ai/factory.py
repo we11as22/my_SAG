@@ -1,7 +1,7 @@
 """
-LLM客户端工厂
+LLM client factory
 
-根据配置创建相应的LLM客户端，支持场景化配置
+Creates corresponding LLM clients based on configuration, supports scenario-based configuration
 """
 
 import hashlib
@@ -20,27 +20,27 @@ logger = get_logger("ai.factory")
 
 def _get_client_fingerprint(config: Dict[str, Any]) -> str:
     """
-    生成客户端配置指纹（通用函数）
+    Generate client configuration fingerprint (common function)
     
-    只包含影响客户端实例的核心参数：
-    - model: 模型名称
-    - api_key: API密钥
-    - base_url: API地址
+    Only includes core parameters that affect client instance:
+    - model: Model name
+    - api_key: API key
+    - base_url: API address
     
-    其他参数（temperature, dimensions, timeout等）不影响客户端实例本身
+    Other parameters (temperature, dimensions, timeout, etc.) do not affect the client instance itself
     
     Args:
-        config: 配置字典
+        config: Configuration dictionary
     
     Returns:
-        配置指纹（MD5 hash）
+        Configuration fingerprint (MD5 hash)
     """
     key_params = {
         'model': config.get('model'),
         'api_key': config.get('api_key'),
         'base_url': config.get('base_url'),
     }
-    # 生成配置的hash值
+    # Generate configuration hash value
     config_str = json.dumps(key_params, sort_keys=True)
     return hashlib.md5(config_str.encode()).hexdigest()
 
@@ -51,22 +51,22 @@ async def create_llm_client(
     **kwargs: Any,
 ) -> BaseLLMClient | LLMRetryClient:
     """
-    创建LLM客户端（统一入口，支持场景化配置）
+    Create LLM client (unified entry point, supports scenario-based configuration)
 
-    配置优先级（从高到低）：
-    1. model_config 显式传入
-    2. 数据库场景配置 (if USE_DB_CONFIG=true)
-    3. 环境变量配置 (兜底)
+    Configuration priority (from high to low):
+    1. model_config explicitly passed
+    2. Database scenario configuration (if USE_DB_CONFIG=true)
+    3. Environment variable configuration (fallback)
 
     Args:
-        scenario: 场景标识，默认 'general'
-            - 'extract' : 事项提取
-            - 'search'  : 搜索
-            - 'chat'    : 对话
-            - 'summary' : 摘要
-            - 'general' : 通用（默认）
+        scenario: Scenario identifier, default 'general'
+            - 'extract' : Event extraction
+            - 'search'  : Search
+            - 'chat'    : Chat
+            - 'summary' : Summary
+            - 'general' : General (default)
         
-        model_config: LLM配置字典（可选）
+        model_config: LLM configuration dictionary (optional)
             {
                 'model': 'gpt-4',
                 'api_key': 'sk-xxx',
@@ -75,39 +75,39 @@ async def create_llm_client(
                 'max_tokens': 8000,
                 ...
             }
-            - 如果传入：直接使用（最高优先级）
-            - 如果不传：自动从配置管理器获取
+            - If passed: directly used (highest priority)
+            - If not passed: automatically obtained from configuration manager
         
-        **kwargs: 零散参数（向后兼容）
+        **kwargs: Scattered parameters (backward compatibility)
 
     Returns:
-        LLM客户端实例
+        LLM client instance
 
     Raises:
-        ConfigError: 无法获取有效配置时抛出
+        ConfigError: Raised when unable to get valid configuration
 
     Examples:
-        # 方式1：只传场景，自动获取配置（推荐）
+        # Method 1: Only pass scenario, auto-get config (recommended)
         >>> client = await create_llm_client(scenario='extract')
         
-        # 方式2：显式传入配置
+        # Method 2: Explicitly pass configuration
         >>> client = await create_llm_client(
         ...     scenario='extract',
         ...     model_config={'model': 'gpt-4', 'temperature': 0.1}
         ... )
         
-        # 方式3：使用默认通用场景
+        # Method 3: Use default general scenario
         >>> client = await create_llm_client()
 
-    说明：
-    - 统一使用 OpenAIClient（兼容 OpenAI 官方 + 302.AI 中转）
-    - 通过 base_url 区分不同服务商
+    Note:
+    - Unified use of OpenAIClient (compatible with OpenAI official + 302.AI proxy)
+    - Distinguish different service providers through base_url
     """
     settings = get_settings()
 
-    # ============ 配置合并（三层优先级）============
+    # ============ Configuration merging (three-layer priority) ============
     
-    # Layer 3: 环境变量兜底
+    # Layer 3: Environment variable fallback
     config = {
         'model': settings.llm_model,
         'api_key': settings.llm_api_key,
@@ -121,38 +121,38 @@ async def create_llm_client(
         'max_retries': settings.llm_max_retries,
     }
     
-    # Layer 2: 数据库配置（指定 type='llm'）
+    # Layer 2: Database configuration (specify type='llm')
     if settings.use_db_config:
         db_config = await _load_db_config(type='llm', scenario=scenario)
         if db_config:
             config.update(db_config)
-            logger.info(f"📊 使用数据库LLM配置: scenario={scenario}, model={db_config.get('model')}")
+            logger.info(f"📊 Using database LLM config: scenario={scenario}, model={db_config.get('model')}")
         else:
-            logger.debug(f"数据库无LLM配置，使用环境变量: scenario={scenario}")
+            logger.debug(f"No database LLM config, using environment variables: scenario={scenario}")
 
-    # Layer 1: 显式配置（最高优先级）
+    # Layer 1: Explicit configuration (highest priority)
     if model_config:
         config.update(model_config)
-        logger.info(f"🎯 使用显式配置: scenario={scenario}")
+        logger.info(f"🎯 Using explicit config: scenario={scenario}")
     
-    # 兼容零散参数（向后兼容）
+    # Compatible with scattered parameters (backward compatibility)
     if kwargs:
         config.update(kwargs)
 
-    # ============ 验证必需参数 ============
+    # ============ Validate required parameters ============
     if not config.get('api_key'):
         raise ConfigError(
-            f"❌ LLM配置错误：缺少 API Key！\n"
-            f"场景: {scenario}\n"
-            f"请检查：数据库配置 或 环境变量 LLM_API_KEY"
+            f"❌ LLM configuration error: Missing API Key!\n"
+            f"Scenario: {scenario}\n"
+            f"Please check: database configuration or environment variable LLM_API_KEY"
         )
     
     if not config.get('model'):
-        raise ConfigError(f"❌ LLM配置错误：缺少模型名称！场景: {scenario}")
+        raise ConfigError(f"❌ LLM configuration error: Missing model name! Scenario: {scenario}")
 
-    # ============ 构建配置对象 ============
+    # ============ Build configuration object ============
     model_config_obj = ModelConfig(
-        provider=LLMProvider.OPENAI,  # 统一使用 OPENAI（兼容所有中转服务）
+        provider=LLMProvider.OPENAI,  # Unified use of OPENAI (compatible with all proxy services)
         model=config['model'],
         api_key=config['api_key'],
         base_url=config.get('base_url'),
@@ -165,26 +165,26 @@ async def create_llm_client(
         max_retries=config['max_retries'],
     )
 
-    # ============ 创建客户端（统一使用OpenAIClient）============
-    # OpenAIClient 兼容：OpenAI 官方 + 302.AI 中转 + 其他兼容服务
+    # ============ Create client (unified use of OpenAIClient) ============
+    # OpenAIClient compatible: OpenAI official + 302.AI proxy + other compatible services
     base_client = OpenAIClient(model_config_obj)
 
-    # 包装重试机制
+    # Wrap retry mechanism
     with_retry = config.get('with_retry', True)
     if with_retry:
         logger.info(
-            f"✅ 创建LLM客户端（带重试）: scenario={scenario}",
+            f"✅ Created LLM client (with retry): scenario={scenario}",
             extra={
                 "scenario": scenario,
                 "model": config['model'],
-                "base_url": config.get('base_url') or 'OpenAI官方',
+                "base_url": config.get('base_url') or 'OpenAI official',
                 "max_retries": config['max_retries'],
             },
         )
         return LLMRetryClient(base_client)
 
     logger.info(
-        f"✅ 创建LLM客户端: scenario={scenario}",
+        f"✅ Created LLM client: scenario={scenario}",
         extra={
             "scenario": scenario,
             "model": config['model'],
@@ -198,22 +198,22 @@ async def _load_db_config(
     scenario: str = 'general'
 ) -> Optional[Dict[str, Any]]:
     """
-    从数据库加载模型配置（通用函数）
+    Load model configuration from database (common function)
     
-    降级策略（针对 LLM）：
-    1. 查询 type + scenario 的专用配置
-    2. 降级到 type + 'general'
-    3. 返回 None（使用环境变量兜底）
+    Degradation strategy (for LLM):
+    1. Query dedicated configuration for type + scenario
+    2. Degrade to type + 'general'
+    3. Return None (use environment variable fallback)
     
-    对于 Embedding/Rerank 等：
-    - 直接查 type + scenario（通常是 general）
+    For Embedding/Rerank, etc.:
+    - Directly query type + scenario (usually general)
     
     Args:
-        type: 模型类型 (llm/embedding/rerank)
-        scenario: 使用场景
+        type: Model type (llm/embedding/rerank)
+        scenario: Usage scenario
         
     Returns:
-        配置字典或None
+        Configuration dictionary or None
     """
     try:
         from sqlalchemy import select
@@ -221,7 +221,7 @@ async def _load_db_config(
         from sag.db.models import ModelConfig
         
         async with get_session_factory()() as session:
-            # 查询指定类型和场景的配置
+            # Query configuration for specified type and scenario
             result = await session.execute(
                 select(ModelConfig)
                 .where(
@@ -234,10 +234,10 @@ async def _load_db_config(
             )
             config = result.scalar_one_or_none()
             if config:
-                logger.debug(f"找到配置: type={type}, scenario={scenario}")
+                logger.debug(f"Found config: type={type}, scenario={scenario}")
                 return _db_model_to_dict(config)
             
-            # 降级策略：仅对 LLM 且非 general 场景生效
+            # Degradation strategy: only for LLM and non-general scenarios
             if type == 'llm' and scenario != 'general':
                 result = await session.execute(
                     select(ModelConfig)
@@ -251,26 +251,26 @@ async def _load_db_config(
                 )
                 config = result.scalar_one_or_none()
                 if config:
-                    logger.debug("降级到通用LLM配置")
+                    logger.debug("Degraded to general LLM config")
                 return _db_model_to_dict(config)
         
         return None
         
     except Exception as e:
-        # 数据库查询失败不影响主流程，返回 None 使用环境变量兜底
-        logger.warning(f"数据库配置加载失败: {e}")
+        # Database query failure does not affect main flow, return None to use environment variable fallback
+        logger.warning(f"Database configuration loading failed: {e}")
         return None
 
 
 def _db_model_to_dict(config) -> Dict[str, Any]:
     """
-    数据库模型转字典
+    Convert database model to dictionary
     
     Args:
-        config: ModelConfig 模型实例
+        config: ModelConfig model instance
         
     Returns:
-        配置字典
+        Configuration dictionary
     """
     result = {
         'model': config.model,
@@ -280,7 +280,7 @@ def _db_model_to_dict(config) -> Dict[str, Any]:
         'max_retries': config.max_retries,
     }
     
-    # LLM 专用参数
+    # LLM-specific parameters
     if hasattr(config, 'temperature'):
         result['temperature'] = float(config.temperature)
     if hasattr(config, 'max_tokens'):
@@ -292,7 +292,7 @@ def _db_model_to_dict(config) -> Dict[str, Any]:
     if hasattr(config, 'presence_penalty'):
         result['presence_penalty'] = float(config.presence_penalty)
     
-    # 扩展数据（如 embedding 的 dimensions）
+    # Extended data (e.g., embedding's dimensions)
     if hasattr(config, 'extra_data') and config.extra_data:
         result['extra_data'] = config.extra_data
     
@@ -300,13 +300,13 @@ def _db_model_to_dict(config) -> Dict[str, Any]:
 
 
 # ============================================================
-# 说明：
-# - LLM 客户端：每次创建新实例，各模块自行管理（extractor, searcher, agent等）
-# - Embedding 客户端：全局单例，配置变更自动替换
+# Note:
+# - LLM client: Create new instance each time, each module manages itself (extractor, searcher, agent, etc.)
+# - Embedding client: Global singleton, automatically replaced when configuration changes
 # ============================================================
 
 
-# ============ Embedding 客户端工厂 ============
+# ============ Embedding Client Factory ============
 
 async def create_embedding_client(
     scenario: str = 'general',
@@ -314,16 +314,16 @@ async def create_embedding_client(
     **kwargs: Any,
 ) -> 'EmbeddingClient':
     """
-    创建Embedding客户端（统一入口，支持分层配置）
+    Create Embedding client (unified entry point, supports layered configuration)
 
-    配置优先级（从高到低）：
-    1. embedding_config 显式传入
-    2. 数据库配置 (if USE_DB_CONFIG=true, model_type='embedding')
-    3. 环境变量配置 (兜底)
+    Configuration priority (from high to low):
+    1. embedding_config explicitly passed
+    2. Database configuration (if USE_DB_CONFIG=true, model_type='embedding')
+    3. Environment variable configuration (fallback)
 
     Args:
-        scenario: 使用场景，默认 'general'（当前 embedding 只用 general，未来可扩展）
-        embedding_config: Embedding配置字典（可选）
+        scenario: Usage scenario, default 'general' (currently embedding only uses general, can be extended in future)
+        embedding_config: Embedding configuration dictionary (optional)
             {
                 'model': 'Qwen/Qwen3-Embedding-0.6B',
                 'api_key': 'sk-xxx',
@@ -331,28 +331,28 @@ async def create_embedding_client(
                 'dimensions': 1536,
                 ...
             }
-        **kwargs: 零散参数（向后兼容）
+        **kwargs: Scattered parameters (backward compatibility)
 
     Returns:
-        EmbeddingClient实例
+        EmbeddingClient instance
 
     Raises:
-        ConfigError: 无法获取有效配置时抛出
+        ConfigError: Raised when unable to get valid configuration
 
     Examples:
-        # 方式1：自动获取配置（推荐）
+        # Method 1: Auto-get config (recommended)
         >>> client = await create_embedding_client()
         
-        # 方式2：显式传入配置
+        # Method 2: Explicitly pass configuration
         >>> client = await create_embedding_client(
         ...     embedding_config={'model': 'text-embedding-3-large'}
         ... )
     """
     settings = get_settings()
 
-    # ============ 配置合并（三层优先级）============
+    # ============ Configuration merging (three-layer priority) ============
     
-    # Layer 3: 环境变量兜底
+    # Layer 3: Environment variable fallback
     config = {
         'model': settings.embedding_model_name,
         'api_key': settings.embedding_api_key or settings.llm_api_key,
@@ -362,90 +362,90 @@ async def create_embedding_client(
         'max_retries': 3,
     }
     
-    # Layer 2: 数据库配置（指定 type='embedding'）
+    # Layer 2: Database configuration (specify type='embedding')
     if settings.use_db_config:
         db_config = await _load_db_config(type='embedding', scenario=scenario)
         if db_config:
-            # 提取 dimensions（可能在 extra_data 中）
+            # Extract dimensions (may be in extra_data)
             if 'extra_data' in db_config and db_config['extra_data']:
                 if 'dimensions' in db_config['extra_data']:
                     db_config['dimensions'] = db_config['extra_data']['dimensions']
             config.update(db_config)
-            logger.info(f"📊 使用数据库Embedding配置: model={db_config.get('model')}")
+            logger.info(f"📊 Using database Embedding config: model={db_config.get('model')}")
         else:
-            logger.debug("数据库无Embedding配置，使用环境变量")
+            logger.debug("No database Embedding config, using environment variables")
 
-    # Layer 1: 显式配置（最高优先级）
+    # Layer 1: Explicit configuration (highest priority)
     if embedding_config:
         config.update(embedding_config)
-        logger.info("🎯 使用显式Embedding配置")
+        logger.info("🎯 Using explicit Embedding config")
     
-    # 兼容零散参数
+    # Compatible with scattered parameters
     if kwargs:
         config.update(kwargs)
 
-    # ============ 验证必需参数 ============
+    # ============ Validate required parameters ============
     if not config.get('api_key'):
         raise ConfigError(
-            "❌ Embedding配置错误：缺少 API Key！\n"
-            f"场景: {scenario}\n"
-            "请检查：数据库配置 或 环境变量 EMBEDDING_API_KEY/LLM_API_KEY"
+            "❌ Embedding configuration error: Missing API Key!\n"
+            f"Scenario: {scenario}\n"
+            "Please check: database configuration or environment variable EMBEDDING_API_KEY/LLM_API_KEY"
         )
     
     if not config.get('model'):
-        raise ConfigError(f"❌ Embedding配置错误：缺少模型名称！场景: {scenario}")
+        raise ConfigError(f"❌ Embedding configuration error: Missing model name! Scenario: {scenario}")
 
-    # ============ 创建客户端 ============
+    # ============ Create client ============
     from sag.core.ai.embedding import EmbeddingClient
     
-    # ✅ 提取参数创建客户端（包含 api_key，确保数据库配置生效）
+    # ✅ Extract parameters to create client (include api_key, ensure database config takes effect)
     client = EmbeddingClient(
         model=config['model'],
         base_url=config.get('base_url'),
         api_key=config.get('api_key')
     )
     
-    # 如果有 dimensions 参数，需要在生成时传递
-    # TODO: 更新 EmbeddingClient.generate() 支持 dimensions 参数
+    # If dimensions parameter exists, need to pass it during generation
+    # TODO: Update EmbeddingClient.generate() to support dimensions parameter
 
     logger.info(
-        "✅ 创建Embedding客户端",
+        "✅ Created Embedding client",
         extra={
             "scenario": scenario,
             "model": config['model'],
-            "base_url": config.get('base_url') or 'OpenAI官方',
-            "dimensions": config.get('dimensions') or '默认',
+            "base_url": config.get('base_url') or 'OpenAI official',
+            "dimensions": config.get('dimensions') or 'default',
         },
     )
     return client
 
 
-# 全局 Embedding 客户端单例（配置变更时自动替换）
+# Global Embedding client singleton (automatically replaced when configuration changes)
 _embedding_client: Optional['EmbeddingClient'] = None
 _embedding_config_fingerprint: Optional[str] = None
 
 
 async def get_embedding_client(scenario: str = 'general') -> 'EmbeddingClient':
     """
-    获取Embedding客户端（单例，配置自动更新）
+    Get Embedding client (singleton, configuration auto-updates)
     
-    工作原理：
-    - 维护全局唯一实例
-    - 每次调用检测配置是否变化（基于指纹）
-    - 配置变化时自动替换为新实例
-    - 配置未变时复用现有实例
+    How it works:
+    - Maintains global unique instance
+    - Detects configuration changes on each call (based on fingerprint)
+    - Automatically replaces with new instance when configuration changes
+    - Reuses existing instance when configuration unchanged
     
-    指纹参数：model, api_key, base_url（通用三要素）
+    Fingerprint parameters: model, api_key, base_url (common three elements)
     
     Args:
-        scenario: 使用场景，默认 'general'
+        scenario: Usage scenario, default 'general'
     
     Returns:
-        EmbeddingClient实例
+        EmbeddingClient instance
     """
     global _embedding_client, _embedding_config_fingerprint
     
-    # 1. 获取完整配置（合并环境变量、数据库配置等）
+    # 1. Get complete configuration (merge environment variables, database config, etc.)
     settings = get_settings()
     config = {
         'model': settings.embedding_model_name,
@@ -456,24 +456,24 @@ async def get_embedding_client(scenario: str = 'general') -> 'EmbeddingClient':
         'max_retries': 3,
     }
     
-    # 2. 尝试从数据库加载配置
+    # 2. Try to load configuration from database
     if settings.use_db_config:
         db_config = await _load_db_config(type='embedding', scenario=scenario)
         if db_config:
-            # 提取 dimensions（可能在 extra_data 中）
+            # Extract dimensions (may be in extra_data)
             if 'extra_data' in db_config and db_config['extra_data']:
                 if 'dimensions' in db_config['extra_data']:
                     db_config['dimensions'] = db_config['extra_data']['dimensions']
             config.update(db_config)
-            logger.debug(f"使用数据库Embedding配置: model={db_config.get('model')}")
+            logger.debug(f"Using database Embedding config: model={db_config.get('model')}")
     
-    # 3. 生成配置指纹（基于关键参数：model, api_key, base_url）
+    # 3. Generate configuration fingerprint (based on key parameters: model, api_key, base_url)
     current_fingerprint = _get_client_fingerprint(config)
     
-    # 4. 检查配置是否变化
+    # 4. Check if configuration has changed
     if _embedding_client is None or current_fingerprint != _embedding_config_fingerprint:
-        # 配置变化或首次创建
-        action = '更新' if _embedding_client else '创建'
+        # Configuration changed or first creation
+        action = 'Updated' if _embedding_client else 'Created'
         
         from sag.core.ai.embedding import EmbeddingClient
         
@@ -485,19 +485,19 @@ async def get_embedding_client(scenario: str = 'general') -> 'EmbeddingClient':
         _embedding_config_fingerprint = current_fingerprint
         
         logger.info(
-            f"🔄 {action}Embedding客户端: model={config['model']}, "
-            f"base_url={config.get('base_url') or '默认'}, "
+            f"🔄 {action} Embedding client: model={config['model']}, "
+            f"base_url={config.get('base_url') or 'default'}, "
             f"fingerprint={current_fingerprint[:8]}..."
         )
     else:
-        logger.debug(f"♻️ 复用Embedding客户端（配置未变）: {config['model']}")
+        logger.debug(f"♻️ Reusing Embedding client (config unchanged): {config['model']}")
     
     return _embedding_client
 
 
 def reset_embedding_client() -> None:
-    """重置Embedding客户端单例"""
+    """Reset Embedding client singleton"""
     global _embedding_client, _embedding_config_fingerprint
     _embedding_client = None
     _embedding_config_fingerprint = None
-    logger.info("已重置Embedding客户端")
+    logger.info("Reset Embedding client")

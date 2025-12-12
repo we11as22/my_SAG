@@ -1,7 +1,7 @@
 """
-MySQL 存储客户端
+MySQL storage client
 
-使用SQLAlchemy 2.0异步API
+Uses SQLAlchemy 2.0 async API
 """
 
 from contextlib import asynccontextmanager
@@ -24,7 +24,7 @@ logger = get_logger("storage.mysql")
 
 
 class MySQLClient:
-    """MySQL异步客户端"""
+    """MySQL async client"""
 
     def __init__(
         self,
@@ -35,14 +35,14 @@ class MySQLClient:
         echo: bool = False,
     ) -> None:
         """
-        初始化MySQL客户端
+        Initialize MySQL client
 
         Args:
-            database_url: 数据库连接URL
-            pool_size: 连接池大小
-            max_overflow: 连接池最大溢出
-            pool_recycle: 连接回收时间（秒）
-            echo: 是否打印SQL语句
+            database_url: Database connection URL
+            pool_size: Connection pool size
+            max_overflow: Connection pool max overflow
+            pool_recycle: Connection recycle time (seconds)
+            echo: Whether to print SQL statements
         """
         settings = get_settings()
 
@@ -51,17 +51,17 @@ class MySQLClient:
         self.max_overflow = max_overflow or settings.db_max_overflow
         self.pool_recycle = pool_recycle or settings.db_pool_recycle
 
-        # 创建异步引擎
+        # Create async engine
         self.engine: AsyncEngine = create_async_engine(
             self.database_url,
             pool_size=self.pool_size,
             max_overflow=self.max_overflow,
             pool_recycle=self.pool_recycle,
-            pool_pre_ping=True,  # 连接前测试
+            pool_pre_ping=True,  # Test connection before use
             echo=echo,
         )
 
-        # 创建会话工厂
+        # Create session factory
         self.session_factory = async_sessionmaker(
             self.engine,
             class_=AsyncSession,
@@ -71,7 +71,7 @@ class MySQLClient:
         )
 
         logger.info(
-            "MySQL客户端初始化完成",
+            "MySQL client initialized",
             extra={
                 "pool_size": self.pool_size,
                 "max_overflow": self.max_overflow,
@@ -81,10 +81,10 @@ class MySQLClient:
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
         """
-        获取数据库会话（上下文管理器）
+        Get database session (context manager)
 
         Yields:
-            AsyncSession实例
+            AsyncSession instance
 
         Example:
             >>> async with mysql_client.session() as session:
@@ -97,27 +97,27 @@ class MySQLClient:
                 await session.commit()
             except Exception as e:
                 await session.rollback()
-                logger.error(f"数据库操作失败: {e}", exc_info=True)
-                raise DatabaseError(f"数据库操作失败: {e}") from e
+                logger.error(f"Database operation failed: {e}", exc_info=True)
+                raise DatabaseError(f"Database operation failed: {e}") from e
 
     async def close(self) -> None:
-        """关闭数据库连接池"""
+        """Close database connection pool"""
         await self.engine.dispose()
-        logger.info("MySQL连接池已关闭")
+        logger.info("MySQL connection pool closed")
 
     async def ping(self) -> bool:
         """
-        测试数据库连接
+        Test database connection
 
         Returns:
-            连接成功返回True，否则返回False
+            True if connection successful, False otherwise
         """
         try:
             async with self.session() as session:
                 await session.execute(text("SELECT 1"))
             return True
         except Exception as e:
-            logger.error(f"数据库连接测试失败: {e}")
+            logger.error(f"Database connection test failed: {e}")
             return False
 
 
@@ -126,28 +126,28 @@ def create_mysql_client(
     **kwargs: Any,
 ) -> MySQLClient:
     """
-    创建MySQL客户端实例
+    Create MySQL client instance
 
     Args:
-        database_url: 数据库连接URL
-        **kwargs: 其他参数
+        database_url: Database connection URL
+        **kwargs: Other parameters
 
     Returns:
-        MySQLClient实例
+        MySQLClient instance
     """
     return MySQLClient(database_url=database_url, **kwargs)
 
 
-# 全局客户端实例（单例）
+# Global client instance (singleton)
 _mysql_client: Optional[MySQLClient] = None
 
 
 def get_mysql_client() -> MySQLClient:
     """
-    获取MySQL客户端单例
+    Get MySQL client singleton
 
     Returns:
-        MySQLClient实例
+        MySQLClient instance
     """
     global _mysql_client
     if _mysql_client is None:
@@ -156,7 +156,7 @@ def get_mysql_client() -> MySQLClient:
 
 
 async def close_mysql_client() -> None:
-    """关闭全局MySQL客户端"""
+    """Close global MySQL client"""
     global _mysql_client
     if _mysql_client is not None:
         await _mysql_client.close()

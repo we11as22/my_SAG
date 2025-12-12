@@ -1,6 +1,6 @@
-"""SAG - 数据流智能引擎
+"""SAG - Data Flow Intelligent Engine
 
-AI驱动的数据处理与聚合检索引擎
+AI-driven data processing and aggregation search engine
 """
 
 __version__ = "0.1.0"

@@ -1,5 +1,5 @@
 """
-事项数据模型
+Event data models
 """
 
 from datetime import datetime
@@ -12,91 +12,91 @@ from sag.models.base import SAGBaseModel, MetadataMixin, TimestampMixin
 
 
 class EventCategory(str, Enum):
-    """事项分类"""
+    """Event category"""
 
-    TECHNICAL = "TECHNICAL"  # 技术
-    BUSINESS = "BUSINESS"  # 业务
-    PERSONAL = "PERSONAL"  # 个人
-    OTHER = "OTHER"  # 其他
+    TECHNICAL = "TECHNICAL"  # Technical
+    BUSINESS = "BUSINESS"  # Business
+    PERSONAL = "PERSONAL"  # Personal
+    OTHER = "OTHER"  # Other
 
 
 class EventPriority(str, Enum):
-    """优先级"""
+    """Priority"""
 
-    HIGH = "HIGH"  # 高
-    MEDIUM = "MEDIUM"  # 中
-    LOW = "LOW"  # 低
+    HIGH = "HIGH"  # High
+    MEDIUM = "MEDIUM"  # Medium
+    LOW = "LOW"  # Low
 
 
 class EventStatus(str, Enum):
-    """事项状态"""
+    """Event status"""
 
-    TODO = "TODO"  # 待办
-    IN_PROGRESS = "IN_PROGRESS"  # 进行中
-    DONE = "DONE"  # 已完成
-    UNKNOWN = "UNKNOWN"  # 未知
+    TODO = "TODO"  # Todo
+    IN_PROGRESS = "IN_PROGRESS"  # In progress
+    DONE = "DONE"  # Done
+    UNKNOWN = "UNKNOWN"  # Unknown
 
 
 class SourceEvent(SAGBaseModel, MetadataMixin, TimestampMixin):
-    """源事项模型"""
+    """Source event model"""
 
-    id: str = Field(..., description="事项ID (UUID)")
-    source_config_id: str = Field(..., description="信息源配置ID")
-    article_id: str = Field(..., description="文章ID")
-    title: str = Field(..., min_length=1, max_length=255, description="标题")
-    summary: str = Field(..., description="摘要")
-    content: str = Field(..., description="内容（事项正文）")
-    category: Optional[str] = Field(default="", max_length=50, description="事项分类（技术、产品、市场、研究、管理等）")
-    rank: int = Field(default=0, ge=0, description="事项序号（同一来源内排序，从0开始）")
-    start_time: Optional[datetime] = Field(default=None, description="开始时间")
-    end_time: Optional[datetime] = Field(default=None, description="结束时间")
-    references: Optional[List[str]] = Field(default=None, description="原始片段引用（从 SourceChunk.references 复制）")
-    chunk_id: Optional[str] = Field(default=None, description="来源片段ID（指向 SourceChunk）")
+    id: str = Field(..., description="Event ID (UUID)")
+    source_config_id: str = Field(..., description="Source configuration ID")
+    article_id: str = Field(..., description="Article ID")
+    title: str = Field(..., min_length=1, max_length=255, description="Title")
+    summary: str = Field(..., description="Summary")
+    content: str = Field(..., description="Content (event body)")
+    category: Optional[str] = Field(default="", max_length=50, description="Event category (technical, product, market, research, management, etc.)")
+    rank: int = Field(default=0, ge=0, description="Event sequence number (sorted within same source, starting from 0)")
+    start_time: Optional[datetime] = Field(default=None, description="Start time")
+    end_time: Optional[datetime] = Field(default=None, description="End time")
+    references: Optional[List[str]] = Field(default=None, description="Original fragment references (copied from SourceChunk.references)")
+    chunk_id: Optional[str] = Field(default=None, description="Source chunk ID (points to SourceChunk)")
 
     def get_category(self) -> Optional[str]:
-        """获取分类"""
+        """Get category"""
         if self.extra_data and "category" in self.extra_data:
             return self.extra_data["category"]
         return None
 
     def get_priority(self) -> Optional[str]:
-        """获取优先级"""
+        """Get priority"""
         if self.extra_data and "priority" in self.extra_data:
             return self.extra_data["priority"]
         return None
 
     def get_status(self) -> Optional[str]:
-        """获取状态"""
+        """Get status"""
         if self.extra_data and "status" in self.extra_data:
             return self.extra_data["status"]
         return None
 
     def get_keywords(self) -> List[str]:
-        """获取关键词"""
+        """Get keywords"""
         if self.extra_data and "keywords" in self.extra_data:
             return self.extra_data["keywords"]
         return []
 
     def get_tags(self) -> List[str]:
-        """获取标签"""
+        """Get tags"""
         if self.extra_data and "tags" in self.extra_data:
             return self.extra_data["tags"]
         return []
 
     def get_references(self) -> List[str]:
-        """获取原始片段引用"""
+        """Get original fragment references"""
         if self.references:
             return self.references
         return []
 
 
 class EventWithEntities(SAGBaseModel):
-    """带实体的事项模型（用于检索结果）"""
+    """Event model with entities (for search results)"""
 
     event: SourceEvent
     entities: List[Dict[str, Any]] = Field(
         ...,
-        description="实体列表：[{type, name, weight, ...}]"
+        description="Entity list: [{type, name, weight, ...}]"
     )
     relevance_score: float = Field(default=0.0, ge=0.0, le=1.0, description="相关度分数")
 

@@ -1,7 +1,7 @@
 """
-配置管理模块
+Configuration management module
 
-使用pydantic-settings管理配置，支持从环境变量和.env文件读取
+Uses pydantic-settings to manage configuration, supports reading from environment variables and .env files
 """
 
 from functools import lru_cache
@@ -12,7 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """应用配置"""
+    """Application configuration"""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -22,115 +22,115 @@ class Settings(BaseSettings):
     )
 
     # ======================
-    # 数据库配置
+    # Database Configuration
     # ======================
-    mysql_host: str = Field(default="localhost", description="MySQL主机")
-    mysql_port: int = Field(default=3306, description="MySQL端口")
-    mysql_user: str = Field(default="sag", description="MySQL用户")
-    mysql_password: str = Field(default="sag_pass", description="MySQL密码")
-    mysql_database: str = Field(default="sag", description="MySQL数据库名")
+    mysql_host: str = Field(default="localhost", description="MySQL host")
+    mysql_port: int = Field(default=3306, description="MySQL port")
+    mysql_user: str = Field(default="sag", description="MySQL user")
+    mysql_password: str = Field(default="sag_pass", description="MySQL password")
+    mysql_database: str = Field(default="sag", description="MySQL database name")
 
     # ======================
-    # Elasticsearch配置
+    # Elasticsearch Configuration
     # ======================
-    es_host: str = Field(default="localhost", description="ES主机")
-    es_port: int = Field(default=9200, description="ES端口")
-    es_username: Optional[str] = Field(default="elastic", description="ES用户名")
+    es_host: str = Field(default="localhost", description="Elasticsearch host")
+    es_port: int = Field(default=9200, description="Elasticsearch port")
+    es_username: Optional[str] = Field(default="elastic", description="Elasticsearch username")
     es_password: Optional[str] = Field(
         default=None,
-        description="ES密码",
+        description="Elasticsearch password",
         validation_alias="ELASTIC_PASSWORD"
     )
 
     # ======================
-    # Redis配置
+    # Redis Configuration
     # ======================
-    redis_host: str = Field(default="localhost", description="Redis主机")
-    redis_port: int = Field(default=6379, description="Redis端口")
-    redis_password: Optional[str] = Field(default=None, description="Redis密码")
-    redis_db: int = Field(default=0, description="Redis数据库")
+    redis_host: str = Field(default="localhost", description="Redis host")
+    redis_port: int = Field(default=6379, description="Redis port")
+    redis_password: Optional[str] = Field(default=None, description="Redis password")
+    redis_db: int = Field(default=0, description="Redis database")
 
     # ======================
-    # LLM配置（使用中转API或OpenAI官方）
+    # LLM Configuration (uses proxy API or OpenAI official)
     # ======================
-    llm_api_key: str = Field(default="", description="LLM API密钥")
-    llm_model: str = Field(default="sophnet/Qwen3-30B-A3B-Thinking-2507", description="LLM模型")
+    llm_api_key: str = Field(default="", description="LLM API key")
+    llm_model: str = Field(default="sophnet/Qwen3-30B-A3B-Thinking-2507", description="LLM model")
     llm_base_url: Optional[str] = Field(
-        default=None, description="LLM API基础URL（留空使用OpenAI官方）"
+        default=None, description="LLM API base URL (leave empty to use OpenAI official)"
     )
     
-    # LLM 行为参数（所有调用的默认值，可被数据库配置覆盖）
-    llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="LLM温度参数")
-    llm_max_tokens: int = Field(default=8000, ge=1, description="LLM最大输出token数")
-    llm_top_p: float = Field(default=1.0, ge=0.0, le=1.0, description="LLM top_p参数")
-    llm_frequency_penalty: float = Field(default=0.0, ge=-2.0, le=2.0, description="频率惩罚")
-    llm_presence_penalty: float = Field(default=0.0, ge=-2.0, le=2.0, description="存在惩罚")
+    # LLM behavior parameters (default values for all calls, can be overridden by database config)
+    llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="LLM temperature parameter")
+    llm_max_tokens: int = Field(default=8000, ge=1, description="LLM maximum output tokens")
+    llm_top_p: float = Field(default=1.0, ge=0.0, le=1.0, description="LLM top_p parameter")
+    llm_frequency_penalty: float = Field(default=0.0, ge=-2.0, le=2.0, description="Frequency penalty")
+    llm_presence_penalty: float = Field(default=0.0, ge=-2.0, le=2.0, description="Presence penalty")
     
-    # LLM 可靠性参数
-    llm_timeout: int = Field(default=600, ge=1, description="LLM超时时间(秒)")
-    llm_max_retries: int = Field(default=3, ge=0, description="LLM最大重试次数")
+    # LLM reliability parameters
+    llm_timeout: int = Field(default=600, ge=1, description="LLM timeout (seconds)")
+    llm_max_retries: int = Field(default=3, ge=0, description="LLM maximum retry count")
     
-    # 数据库配置开关
-    use_db_config: bool = Field(default=True, description="是否使用数据库配置")
+    # Database configuration switch
+    use_db_config: bool = Field(default=True, description="Whether to use database configuration")
 
     # ======================
-    # Embedding配置（使用中转API或OpenAI官方）
+    # Embedding Configuration (uses proxy API or OpenAI official)
     # ======================
     embedding_api_key: str = Field(
-        default="", description="Embedding API密钥（留空使用llm_api_key）"
+        default="", description="Embedding API key (leave empty to use llm_api_key)"
     )
-    embedding_model_name: str = Field(default="Qwen/Qwen3-Embedding-0.6B", description="Embedding模型")
+    embedding_model_name: str = Field(default="Qwen/Qwen3-Embedding-0.6B", description="Embedding model")
     embedding_dimensions: Optional[int] = Field(
         default=None,
-        description="Embedding维度（可选，留空则使用模型默认维度。text-embedding-3-small默认1536，text-embedding-3-large默认3072）",
+        description="Embedding dimensions (optional, leave empty to use model default. text-embedding-3-small default 1536, text-embedding-3-large default 3072)",
     )
     embedding_base_url: Optional[str] = Field(
-        default=None, description="Embedding API基础URL（留空使用llm_base_url）"
+        default=None, description="Embedding API base URL (leave empty to use llm_base_url)"
     )
 
     # ======================
-    # 应用配置
+    # Application Configuration
     # ======================
-    debug: bool = Field(default=False, description="调试模式")
-    log_level: str = Field(default="INFO", description="日志级别")
-    log_format: str = Field(default="json", description="日志格式")
+    debug: bool = Field(default=False, description="Debug mode")
+    log_level: str = Field(default="INFO", description="Log level")
+    log_format: str = Field(default="json", description="Log format")
 
     # ======================
-    # API 配置
+    # API Configuration
     # ======================
-    api_host: str = Field(default="0.0.0.0", description="API 服务地址")
-    api_port: int = Field(default=8000, description="API 服务端口")
-    api_workers: int = Field(default=4, description="API Worker 数量")
+    api_host: str = Field(default="0.0.0.0", description="API service address")
+    api_port: int = Field(default=8000, description="API service port")
+    api_workers: int = Field(default=4, description="API worker count")
 
     # ======================
-    # 文件上传配置
+    # File Upload Configuration
     # ======================
-    upload_dir: str = Field(default="./uploads", description="上传文件目录")
+    upload_dir: str = Field(default="./uploads", description="Upload file directory")
     max_upload_size: int = Field(
-        default=100 * 1024 * 1024, description="最大上传大小（字节，默认100MB）"
+        default=100 * 1024 * 1024, description="Maximum upload size (bytes, default 100MB)"
     )
 
-    # 实体权重配置
+    # Entity weight configuration
     # entity_weights: str = Field(
     #     default="time:0.9,location:1.0,person:1.1,topic:1.5,action:1.2,tags:1.0",
-    #     description="实体类型权重",
+    #     description="Entity type weights",
     # )
 
     # ======================
-    # 性能配置
+    # Performance Configuration
     # ======================
-    db_pool_size: int = Field(default=10, description="数据库连接池大小")
-    db_max_overflow: int = Field(default=20, description="数据库连接池最大溢出")
-    db_pool_recycle: int = Field(default=3600, description="数据库连接回收时间(秒)")
+    db_pool_size: int = Field(default=10, description="Database connection pool size")
+    db_max_overflow: int = Field(default=20, description="Database connection pool max overflow")
+    db_pool_recycle: int = Field(default=3600, description="Database connection recycle time (seconds)")
 
-    # 缓存TTL
-    cache_entity_ttl: int = Field(default=86400, description="实体缓存TTL(秒)")
-    cache_llm_ttl: int = Field(default=604800, description="LLM缓存TTL(秒)")
-    cache_search_ttl: int = Field(default=3600, description="搜索缓存TTL(秒)")
+    # Cache TTL
+    cache_entity_ttl: int = Field(default=86400, description="Entity cache TTL (seconds)")
+    cache_llm_ttl: int = Field(default=604800, description="LLM cache TTL (seconds)")
+    cache_search_ttl: int = Field(default=3600, description="Search cache TTL (seconds)")
 
     @property
     def mysql_url(self) -> str:
-        """MySQL连接URL"""
+        """MySQL connection URL"""
         return (
             f"mysql+aiomysql://{self.mysql_user}:{self.mysql_password}"
             f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
@@ -139,17 +139,17 @@ class Settings(BaseSettings):
 
     @property
     def elasticsearch_url(self) -> str:
-        """Elasticsearch连接URL"""
+        """Elasticsearch connection URL"""
         return f"http://{self.es_host}:{self.es_port}"
 
     @property
     def es_url(self) -> str:
-        """Elasticsearch连接URL（兼容旧版本）"""
+        """Elasticsearch connection URL (compatible with old version)"""
         return self.elasticsearch_url
 
     # @property
     # def entity_weights_dict(self) -> Dict[str, float]:
-    #     """实体权重字典"""
+    #     """Entity weights dictionary"""
     #     result = {}
     #     for pair in self.entity_weights.split(","):
     #         if ":" in pair:
@@ -163,14 +163,14 @@ class Settings(BaseSettings):
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
-        """验证日志级别"""
+        """Validate log level"""
         allowed = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in allowed:
-            raise ValueError(f"日志级别必须是: {', '.join(allowed)}")
+            raise ValueError(f"Log level must be one of: {', '.join(allowed)}")
         return v.upper()
 
 
 @lru_cache()
 def get_settings() -> Settings:
-    """获取配置单例"""
+    """Get configuration singleton"""
     return Settings()

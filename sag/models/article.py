@@ -1,5 +1,5 @@
 """
-文章数据模型
+Article data models
 """
 
 from enum import Enum
@@ -11,35 +11,35 @@ from sag.models.base import SAGBaseModel, MetadataMixin, TimestampMixin
 
 
 class ArticleStatus(str, Enum):
-    """文章状态"""
+    """Article status"""
 
-    PENDING = "PENDING"  # 待处理
-    COMPLETED = "COMPLETED"  # 已完成
-    FAILED = "FAILED"  # 失败
+    PENDING = "PENDING"  # Pending
+    COMPLETED = "COMPLETED"  # Completed
+    FAILED = "FAILED"  # Failed
 
 
 class Article(SAGBaseModel, MetadataMixin, TimestampMixin):
-    """文章模型"""
+    """Article model"""
 
-    id: Optional[str] = Field(default=None, description="文章ID (UUID)")
-    source_config_id: str = Field(..., description="信息源ID")
-    title: str = Field(..., max_length=500, description="文章标题")
-    summary: Optional[str] = Field(default=None, description="文章摘要（LLM生成）")
-    content: Optional[str] = Field(default=None, description="文章正文")
+    id: Optional[str] = Field(default=None, description="Article ID (UUID)")
+    source_config_id: str = Field(..., description="Source ID")
+    title: str = Field(..., max_length=500, description="Article title")
+    summary: Optional[str] = Field(default=None, description="Article summary (LLM generated)")
+    content: Optional[str] = Field(default=None, description="Article body")
     status: ArticleStatus = Field(
-        default=ArticleStatus.PENDING, description="处理状态")
+        default=ArticleStatus.PENDING, description="Processing status")
     category: Optional[str] = Field(
-        default=None, max_length=50, description="分类")
-    tags: Optional[List[str]] = Field(default=None, description="标签列表")
+        default=None, max_length=50, description="Category")
+    tags: Optional[List[str]] = Field(default=None, description="Tag list")
 
     def get_category(self) -> Optional[str]:
-        """获取文章分类"""
+        """Get article category"""
         if self.extra_data and "category" in self.extra_data:
             return self.extra_data["category"]
         return self.category
 
     def get_tags(self) -> List[str]:
-        """获取文章标签"""
+        """Get article tags"""
         if self.tags:
             return self.tags
         if self.extra_data and "tags" in self.extra_data:
@@ -47,42 +47,42 @@ class Article(SAGBaseModel, MetadataMixin, TimestampMixin):
         return []
 
     def get_headings(self) -> List[str]:
-        """获取文章标题列表"""
+        """Get article heading list"""
         if self.extra_data and "headings" in self.extra_data:
             return self.extra_data["headings"]
         return []
 
 
 class ArticleSection(SAGBaseModel, MetadataMixin, TimestampMixin):
-    """文章片段模型"""
+    """Article section model"""
 
-    id: Optional[str] = Field(default=None, description="片段ID (UUID)")
-    article_id: str = Field(..., description="文章ID")
-    rank: int = Field(..., ge=0, description="片段序号（从0开始）")
-    heading: str = Field(..., max_length=500, description="标题/小标题")
-    content: str = Field(..., description="内容（纯文本）")
+    id: Optional[str] = Field(default=None, description="Section ID (UUID)")
+    article_id: str = Field(..., description="Article ID")
+    rank: int = Field(..., ge=0, description="Section sequence number (starting from 0)")
+    heading: str = Field(..., max_length=500, description="Heading/subheading")
+    content: str = Field(..., description="Content (plain text)")
 
     def get_type(self) -> str:
-        """获取片段类型"""
+        """Get section type"""
         if self.extra_data and "type" in self.extra_data:
             return self.extra_data["type"]
         return "TEXT"
 
     def get_length(self) -> int:
-        """获取内容长度"""
+        """Get content length"""
         if self.extra_data and "length" in self.extra_data:
             return self.extra_data["length"]
         return len(self.content)
 
 
 class ArticleCreate(SAGBaseModel):
-    """创建文章请求"""
+    """Create article request"""
 
-    source_config_id: str = Field(..., description="信息源ID")
-    title: str = Field(..., min_length=1, max_length=500, description="文章标题")
-    content: Optional[str] = Field(default=None, description="文章正文")
-    summary: Optional[str] = Field(default=None, description="文章摘要")
-    category: Optional[str] = Field(default=None, description="分类")
-    tags: Optional[List[str]] = Field(default=None, description="标签")
+    source_config_id: str = Field(..., description="Source ID")
+    title: str = Field(..., min_length=1, max_length=500, description="Article title")
+    content: Optional[str] = Field(default=None, description="Article body")
+    summary: Optional[str] = Field(default=None, description="Article summary")
+    category: Optional[str] = Field(default=None, description="Category")
+    tags: Optional[List[str]] = Field(default=None, description="Tags")
     extra_data: Optional[Dict[str, Any]] = Field(
-        default=None, description="扩展数据")
+        default=None, description="Extended data")
