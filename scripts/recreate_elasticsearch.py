@@ -1,59 +1,59 @@
 """
-Elasticsearch 索引重建脚本
+Elasticsearch index recreation script
 
-删除并重新创建所有 ES 索引
+Delete and recreate all ES indices
 """
 
 import asyncio
 import sys
 from pathlib import Path
 
-# 添加项目根目录到路径
+# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from sag.core.storage.documents import REGISTERED_DOCUMENTS
 from sag.core.storage.elasticsearch import ElasticsearchClient
-from sag.utils import get_logger  # 添加这行
+from sag.utils import get_logger
 
 logger = get_logger("scripts.recreate_es_indices")
 
 
 def print_header(text: str) -> None:
-    """打印标题"""
+    """Print header"""
     print("\n" + "=" * 70)
     print(f"  {text}")
     print("=" * 70)
 
 
 def print_success(text: str) -> None:
-    """打印成功信息"""
+    """Print success message"""
     print(f"  ✓ {text}")
 
 
 def print_info(text: str) -> None:
-    """打印普通信息"""
+    """Print info message"""
     print(f"  • {text}")
 
 
 def print_warning(text: str) -> None:
-    """打印警告信息"""
+    """Print warning message"""
     print(f"  ⚠️  {text}")
 
 
 def print_error(text: str) -> None:
-    """打印错误信息"""
+    """Print error message"""
     print(f"  ✗ {text}")
 
 
 async def delete_indices(es_client: ElasticsearchClient) -> dict[str, bool]:
     """
-    删除所有 ES 索引
+    Delete all ES indices
 
     Returns:
-        dict: 索引名 -> 是否成功删除
+        dict: index name -> whether deletion was successful
     """
-    print_header("步骤 1/2: 删除现有索引")
+    print_header("Step 1/2: Delete Existing Indices")
 
     results = {}
 
@@ -61,26 +61,26 @@ async def delete_indices(es_client: ElasticsearchClient) -> dict[str, bool]:
         try:
             index_name = document_cls.Index.name
         except AttributeError as e:
-            print_error(f"Document 类 {document_cls.__name__} 索引名称获取失败: {e}")
-            logger.error(f"Document 类 {document_cls.__name__} 缺少 Index.name: {e}")
+            print_error(f"Document class {document_cls.__name__} index name retrieval failed: {e}")
+            logger.error(f"Document class {document_cls.__name__} missing Index.name: {e}")
             results[document_cls.__name__] = False
             continue
 
-        # 检查索引是否存在
+        # Check if index exists
         exists = await es_client.index_exists(index_name)
 
         if not exists:
-            print_info(f"{index_name}: 索引不存在，跳过删除")
+            print_info(f"{index_name}: Index does not exist, skipping deletion")
             results[index_name] = True
             continue
 
-        # 删除索引
+        # Delete index
         try:
             await es_client.delete_index(index_name)
-            print_success(f"{index_name}: 删除成功")
+            print_success(f"{index_name}: Deleted successfully")
             results[index_name] = True
         except Exception as e:
-            print_error(f"{index_name}: 删除失败 - {e}")
+            print_error(f"{index_name}: Deletion failed - {e}")
             results[index_name] = False
 
     return results
@@ -88,47 +88,47 @@ async def delete_indices(es_client: ElasticsearchClient) -> dict[str, bool]:
 
 async def create_indices(es_client: ElasticsearchClient) -> dict[str, bool]:
     """
-    创建所有 ES 索引
+    Create all ES indices
 
     Returns:
-        dict: 索引名 -> 是否成功创建
+        dict: index name -> whether creation was successful
     """
-    print_header("步骤 2/2: 创建新索引")
+    print_header("Step 2/2: Create New Indices")
 
     results = {}
 
     for document_cls in REGISTERED_DOCUMENTS:
         try:
-            # 从 Document 类获取索引配置
+            # Get index configuration from Document class
             index_name = document_cls.Index.name
             mapping = document_cls._doc_type.mapping.to_dict()
             settings = getattr(document_cls.Index, "settings", {})
         except AttributeError as e:
-            print_error(f"Document 类 {document_cls.__name__} 配置获取失败: {e}")
-            logger.error(f"Document 类 {document_cls.__name__} 缺少必要属性: {e}")
+            print_error(f"Document class {document_cls.__name__} configuration retrieval failed: {e}")
+            logger.error(f"Document class {document_cls.__name__} missing required attributes: {e}")
             results[document_cls.__name__] = False
             continue
 
         try:
-            # 创建索引
+            # Create index
             await es_client.create_index(
                 index=index_name,
                 mappings=mapping,
                 settings=settings
             )
-            print_success(f"{index_name}: 创建成功")
+            print_success(f"{index_name}: Created successfully")
 
-            # 验证索引配置
+            # Verify index configuration
             exists = await es_client.index_exists(index_name)
             if exists:
-                print_info(f"{index_name}: 验证通过，索引已存在")
+                print_info(f"{index_name}: Verification passed, index exists")
                 results[index_name] = True
             else:
-                print_error(f"{index_name}: 验证失败，索引不存在")
+                print_error(f"{index_name}: Verification failed, index does not exist")
                 results[index_name] = False
 
         except Exception as e:
-            print_error(f"{index_name}: 创建失败 - {e}")
+            print_error(f"{index_name}: Creation failed - {e}")
             results[index_name] = False
 
     return results
@@ -136,108 +136,108 @@ async def create_indices(es_client: ElasticsearchClient) -> dict[str, bool]:
 
 async def verify_indices(es_client: ElasticsearchClient) -> None:
     """
-    验证所有索引及其配置
+    Verify all indices and their configurations
     """
-    print_header("验证索引配置")
+    print_header("Verify Index Configuration")
 
     for document_cls in REGISTERED_DOCUMENTS:
         try:
             index_name = document_cls.Index.name
         except AttributeError as e:
-            print_error(f"Document 类 {document_cls.__name__} 索引名称获取失败: {e}")
-            logger.error(f"Document 类 {document_cls.__name__} 缺少 Index.name: {e}")
+            print_error(f"Document class {document_cls.__name__} index name retrieval failed: {e}")
+            logger.error(f"Document class {document_cls.__name__} missing Index.name: {e}")
             continue
 
         exists = await es_client.index_exists(index_name)
 
         if exists:
-            print_success(f"{index_name}: 索引存在")
+            print_success(f"{index_name}: Index exists")
 
-            # 可以添加更多验证，比如检查映射配置
+            # Can add more verification, e.g., check mapping configuration
             try:
-                # 这里可以添加获取映射并验证的逻辑
-                print_info(f"{index_name}: 配置验证通过")
+                # Can add logic to get and verify mapping here
+                print_info(f"{index_name}: Configuration verification passed")
             except Exception as e:
-                print_warning(f"{index_name}: 配置验证失败 - {e}")
+                print_warning(f"{index_name}: Configuration verification failed - {e}")
         else:
-            print_error(f"{index_name}: 索引不存在")
+            print_error(f"{index_name}: Index does not exist")
 
 
 async def main() -> None:
     """
-    主函数
+    Main function
     """
     es_client = None
 
     try:
-        print_header("SAG Elasticsearch 索引重建工具")
-        print_info("此工具将删除并重新创建所有 Elasticsearch 索引")
-        print_warning("警告: 所有索引中的数据将被永久删除！")
+        print_header("SAG Elasticsearch Index Recreation Tool")
+        print_info("This tool will delete and recreate all Elasticsearch indices")
+        print_warning("Warning: All data in indices will be permanently deleted!")
 
-        # 请求用户确认
+        # Request user confirmation
         print("\n")
-        confirm = input("  确认继续? (yes/no): ").strip().lower()
+        confirm = input("  Confirm to continue? (yes/no): ").strip().lower()
 
         if confirm != 'yes':
-            print_info("操作已取消")
+            print_info("Operation cancelled")
             return
 
-        # 1. 创建 ES 客户端
-        print_info("正在连接 Elasticsearch...")
+        # 1. Create ES client
+        print_info("Connecting to Elasticsearch...")
         es_client = ElasticsearchClient()
 
-        # 2. 检查连接
+        # 2. Check connection
         if not await es_client.check_connection():
-            print_error("Elasticsearch 连接失败，请检查配置")
+            print_error("Elasticsearch connection failed, please check configuration")
             sys.exit(1)
 
-        print_success("Elasticsearch 连接成功")
+        print_success("Elasticsearch connection successful")
 
-        # 3. 删除现有索引
+        # 3. Delete existing indices
         delete_results = await delete_indices(es_client)
 
-        # 4. 创建新索引
+        # 4. Create new indices
         create_results = await create_indices(es_client)
 
-        # 5. 验证索引
+        # 5. Verify indices
         await verify_indices(es_client)
 
-        # 6. 总结
-        print_header("操作总结")
+        # 6. Summary
+        print_header("Operation Summary")
 
         all_success = all(delete_results.values()) and all(create_results.values())
 
         if all_success:
-            print_success("所有索引重建成功！")
-            print_info(f"共重建 {len(REGISTERED_DOCUMENTS)} 个索引:")
+            print_success("All indices recreated successfully!")
+            print_info(f"Total recreated {len(REGISTERED_DOCUMENTS)} indices:")
             for document_cls in REGISTERED_DOCUMENTS:
                 try:
                     index_name = document_cls.Index.name
                 except AttributeError as e:
-                    print_error(f"Document 类 {document_cls.__name__} 索引名称获取失败: {e}")
-                    logger.error(f"Document 类 {document_cls.__name__} 缺少 Index.name: {e}")
+                    print_error(f"Document class {document_cls.__name__} index name retrieval failed: {e}")
+                    logger.error(f"Document class {document_cls.__name__} missing Index.name: {e}")
                     continue
                 print(f"    - {index_name}")
         else:
-            print_warning("部分索引重建失败，请查看上方详细信息")
+            print_warning("Some indices recreation failed, please check details above")
 
             failed_indices = [
                 name for name, success in create_results.items()
                 if not success
             ]
             if failed_indices:
-                print_error(f"失败的索引: {', '.join(failed_indices)}")
+                print_error(f"Failed indices: {', '.join(failed_indices)}")
 
         print("=" * 70 + "\n")
 
     except Exception as e:
-        print_error(f"索引重建失败: {e}")
+        print_error(f"Index recreation failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
     finally:
-        # 关闭连接
+        # Close connection
         if es_client:
             await es_client.close()
 

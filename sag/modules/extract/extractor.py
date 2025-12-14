@@ -367,12 +367,17 @@ class EventExtractor:
         Returns:
             批次列表，每个批次是片段列表
         """
+        self.logger.info(
+            f"📊 Расчет батчей: max_tokens={config.max_tokens}"
+        )
+        
         batches = []
         current_batch = []
         current_tokens = 0
 
         for section in sections:
-            section_text = f"{section.heading}\n{section.content}"
+            # Форматируем как в _build_context (с заголовком)
+            section_text = f"## 片段 {len(current_batch) + 1}: {section.heading}\n{section.content}"
             section_tokens = estimate_tokens(section_text)
 
             will_exceed_token_limit = (
@@ -384,6 +389,9 @@ class EventExtractor:
                 batches.append(current_batch)
                 current_batch = []
                 current_tokens = 0
+                # Пересчитываем заголовок для нового батча
+                section_text = f"## 片段 1: {section.heading}\n{section.content}"
+                section_tokens = estimate_tokens(section_text)
 
             current_batch.append(section)
             current_tokens += section_tokens
@@ -392,8 +400,9 @@ class EventExtractor:
             batches.append(current_batch)
 
         self.logger.info(
-            f"创建了 {len(batches)} 个批次，"
-            f"平均每批 {len(sections) / len(batches):.1f} 个片段"
+            f"✅ Создано {len(batches)} батчей, "
+            f"средний размер: {len(sections) / len(batches):.1f} чанков, "
+            f"max_tokens: {config.max_tokens} токенов"
         )
 
         return batches

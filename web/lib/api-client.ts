@@ -1,15 +1,24 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 
-// API 基础路径配置
-// 开发环境: 使用 NEXT_PUBLIC_API_URL 环境变量（如 http://localhost:8000）直接访问后端
-// 生产环境/Docker: 使用空字符串（相对路径），通过 Nginx 代理到后端 API
+// API base path configuration
+// Development: Use NEXT_PUBLIC_API_URL environment variable (e.g., http://localhost:8000) to access backend directly
+// Production/Docker: Use relative path, proxied through Nginx to backend API
 const getApiBaseUrl = () => {
-  // 如果明确设置了 NEXT_PUBLIC_API_URL，使用它（本地开发）
+  // If NEXT_PUBLIC_API_URL is explicitly set, use it (local development)
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL
   }
   
-  // 否则使用相对路径（Docker/生产环境，走Nginx代理）
+  // In browser, detect if we're accessing through port 3001 (Next.js) or 8080 (Nginx)
+  if (typeof window !== 'undefined') {
+    const port = window.location.port
+    // If accessing through port 3001, redirect API calls to port 8080 (Nginx)
+    if (port === '3001') {
+      return `${window.location.protocol}//${window.location.hostname}:8080`
+    }
+  }
+  
+  // Otherwise use relative path (Docker/production, goes through Nginx proxy)
   return ''
 }
 

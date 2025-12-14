@@ -1,4 +1,4 @@
-"""信息源配置 Schema"""
+"""Source configuration Schema"""
 
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -9,32 +9,32 @@ from sag.api.schemas.base import TimestampMixin
 
 
 class SourceConfigCreateRequest(BaseModel):
-    """创建信息源配置请求"""
+    """Create source configuration request"""
 
-    name: str = Field(..., min_length=1, max_length=100, description="信息源配置名称")
+    name: str = Field(..., min_length=1, max_length=100, description="Source configuration name")
     description: Optional[str] = Field(
-        default=None, max_length=255, description="信息源配置描述"
+        default=None, max_length=255, description="Source configuration description"
     )
     config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description='偏好设置，格式：{"focus": ["AI"], "language": "zh"}',
+        description='Preference settings, format: {"focus": ["AI"], "language": "zh"}',
     )
 
 
 class SourceConfigUpdateRequest(BaseModel):
-    """更新信息源配置请求"""
+    """Update source configuration request"""
 
     name: Optional[str] = Field(
-        default=None, min_length=1, max_length=100, description="信息源配置名称"
+        default=None, min_length=1, max_length=100, description="Source configuration name"
     )
     description: Optional[str] = Field(
-        default=None, max_length=255, description="信息源配置描述"
+        default=None, max_length=255, description="Source configuration description"
     )
-    config: Optional[Dict[str, Any]] = Field(default=None, description="偏好设置")
+    config: Optional[Dict[str, Any]] = Field(default=None, description="Preference settings")
 
 
 class SourceConfigResponse(TimestampMixin):
-    """信息源配置响应"""
+    """Source configuration response"""
 
     id: str
     name: str
@@ -42,8 +42,8 @@ class SourceConfigResponse(TimestampMixin):
     config: Optional[Dict[str, Any]] = None
     created_time: datetime
     updated_time: Optional[datetime] = None
-    document_count: int = Field(default=0, description="文档数量")
-    entity_types_count: int = Field(default=0, description="专属实体类型数量")
+    document_count: int = Field(default=0, description="Document count")
+    entity_types_count: int = Field(default=0, description="Source-specific entity type count")
 
     class Config:
         from_attributes = True

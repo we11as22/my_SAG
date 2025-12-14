@@ -1,10 +1,10 @@
 """
-本地下载 NLTK 数据到项目目录
+Download NLTK data locally to project directory
 
-在开发机上运行一次，将 NLTK 数据下载到项目的 nltk_data/ 目录
-然后提交到 git，Docker 构建时直接 COPY，避免每次构建都从网络下载
+Run once on development machine to download NLTK data to project's nltk_data/ directory
+Then commit to git, Docker build will directly COPY, avoiding network download on each build
 
-使用方式:
+Usage:
     python scripts/download_nltk_data.py
 """
 
@@ -13,25 +13,25 @@ import sys
 from pathlib import Path
 
 def download_nltk_to_project():
-    """下载 NLTK 数据到项目目录"""
+    """Download NLTK data to project directory"""
     try:
         import nltk
     except ImportError:
-        print("❌ 错误: 未安装 nltk 库")
-        print("请先安装: pip install nltk")
+        print("❌ Error: nltk library not installed")
+        print("Please install first: pip install nltk")
         sys.exit(1)
     
-    # 项目根目录
+    # Project root directory
     project_root = Path(__file__).parent.parent
     nltk_data_dir = project_root / "nltk_data"
     nltk_data_dir.mkdir(exist_ok=True)
     
     print("="*60)
-    print("SAG - NLTK 数据本地下载工具")
+    print("SAG - NLTK Data Local Download Tool")
     print("="*60)
-    print(f"\n📁 下载目录: {nltk_data_dir}")
+    print(f"\n📁 Download directory: {nltk_data_dir}")
     
-    # 处理 SSL 证书问题
+    # Handle SSL certificate issues
     try:
         _create_unverified_https_context = ssl._create_unverified_context
     except AttributeError:
@@ -39,27 +39,27 @@ def download_nltk_to_project():
     else:
         ssl._create_default_https_context = _create_unverified_https_context
     
-    # 需要的资源列表
+    # Required resources list
     resources = ['punkt', 'punkt_tab']
     
-    print("\n开始下载 NLTK 数据...")
+    print("\nStarting NLTK data download...")
     success_count = 0
     
     for resource in resources:
-        print(f"\n📥 下载 {resource}...")
+        print(f"\n📥 Downloading {resource}...")
         try:
             nltk.download(resource, download_dir=str(nltk_data_dir), quiet=False)
-            print(f"✓ {resource} 下载完成")
+            print(f"✓ {resource} download completed")
             success_count += 1
         except Exception as e:
-            print(f"✗ {resource} 下载失败: {e}")
+            print(f"✗ {resource} download failed: {e}")
     
-    # 验证
+    # Verify
     print("\n" + "="*60)
-    print("验证下载的数据...")
+    print("Verifying downloaded data...")
     print("="*60)
     
-    # 临时添加到 NLTK 的搜索路径
+    # Temporarily add to NLTK search path
     if str(nltk_data_dir) not in nltk.data.path:
         nltk.data.path.insert(0, str(nltk_data_dir))
     
@@ -74,30 +74,30 @@ def download_nltk_to_project():
             path = nltk.data.find(resource_path)
             print(f"✓ {resource}: {path}")
         except Exception as e:
-            print(f"✗ {resource} 验证失败: {e}")
+            print(f"✗ {resource} verification failed: {e}")
             all_ok = False
     
-    # 总结
+    # Summary
     print("\n" + "="*60)
     if all_ok and success_count == len(resources):
-        print("✅ 所有 NLTK 数据已成功下载到项目目录！")
-        print(f"\n📁 位置: {nltk_data_dir}")
-        print(f"📦 已下载: {', '.join(resources)}")
+        print("✅ All NLTK data successfully downloaded to project directory!")
+        print(f"\n📁 Location: {nltk_data_dir}")
+        print(f"📦 Downloaded: {', '.join(resources)}")
         
-        # 检查目录大小
+        # Check directory size
         total_size = sum(f.stat().st_size for f in nltk_data_dir.rglob('*') if f.is_file())
         size_mb = total_size / (1024 * 1024)
-        print(f"💾 总大小: {size_mb:.2f} MB")
+        print(f"💾 Total size: {size_mb:.2f} MB")
         
-        print("\n下一步:")
-        print("  1. 将数据提交到 git:")
+        print("\nNext steps:")
+        print("  1. Commit data to git:")
         print("     git add nltk_data/")
         print("     git commit -m 'Add pre-downloaded NLTK data'")
         print("     git push")
-        print("\n  2. 重新构建 Docker 镜像:")
+        print("\n  2. Rebuild Docker image:")
         print("     docker-compose build api")
     else:
-        print("⚠️  部分资源下载失败，请检查网络连接后重试")
+        print("⚠️  Some resources download failed, please check network connection and retry")
         sys.exit(1)
     
     print("="*60)

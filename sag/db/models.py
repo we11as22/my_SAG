@@ -175,7 +175,7 @@ class ArticleSection(Base):
     # 片段信息
     rank: Mapped[int] = mapped_column(Integer, nullable=False)
     heading: Mapped[str] = mapped_column(String(500), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(MEDIUMTEXT(), nullable=False)
 
     # 扩展数据：{"type": "TEXT|IMAGE|CODE", "length": 0}
     extra_data: Mapped[Optional[dict]] = mapped_column(JSON)
@@ -508,7 +508,7 @@ class SourceEvent(Base):
     # 事件信息
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(MEDIUMTEXT(), nullable=False)
 
     # 事项分类（如：技术、产品、市场、研究、管理等）
     category: Mapped[Optional[str]] = mapped_column(String(50), default="")
@@ -936,11 +936,11 @@ class SourceChunk(Base):
     )
 
     # 可选字段（无默认值但可为空）
-    content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    content: Mapped[Optional[str]] = mapped_column(MEDIUMTEXT(), nullable=True)
     extra_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     references: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     heading: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    raw_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    raw_content: Mapped[Optional[str]] = mapped_column(MEDIUMTEXT(), nullable=True)
     
     # 有默认值的字段
     rank: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

@@ -37,7 +37,7 @@ export function SourceDialog({
 
   const [errors, setErrors] = useState<Partial<Record<keyof SourceFormData, string>>>({})
 
-  // 重置或填充表单
+  // Reset or fill form
   useEffect(() => {
     if (open) {
       if (source) {
@@ -59,7 +59,7 @@ export function SourceDialog({
     const newErrors: Partial<Record<keyof SourceFormData, string>> = {}
 
     if (!formData.name.trim()) {
-      newErrors.name = '请输入信息源名称'
+      newErrors.name = 'Please enter source name'
     }
 
     setErrors(newErrors)
@@ -69,13 +69,19 @@ export function SourceDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
+      // Ensure we send the data in the correct format
+      const submitData = {
+        name: formData.name.trim(),
+        description: formData.description?.trim() || undefined,
+      }
+      console.log('Submitting source data:', submitData)
+      onSubmit(submitData as SourceFormData)
     }
   }
 
   const handleChange = (field: keyof SourceFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    // 清除该字段的错误
+    // Clear error for this field
     if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev }
@@ -90,7 +96,7 @@ export function SourceDialog({
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* 背景遮罩 */}
+        {/* Background overlay */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -100,7 +106,7 @@ export function SourceDialog({
           className="absolute inset-0 bg-black/20 backdrop-blur-md"
         />
 
-        {/* 对话框内容 */}
+        {/* Dialog content */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -108,10 +114,10 @@ export function SourceDialog({
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
         >
-          {/* 头部 */}
+          {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800">
-              {isEditMode ? '编辑信息源' : '创建信息源'}
+              {isEditMode ? 'Edit Source' : 'Create Source'}
             </h2>
             <button
               onClick={onClose}
@@ -121,19 +127,19 @@ export function SourceDialog({
             </button>
           </div>
 
-          {/* 表单 */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-            {/* 名称 */}
+            {/* Name */}
             <div className="space-y-2.5">
               <Label htmlFor="name-input" className="text-sm font-medium text-gray-800">
-                名称 <span className="text-red-500">*</span>
+                Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name-input"
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="例如: 我的知识库"
+                placeholder="e.g., My Knowledge Base"
                 className={`h-11 rounded-lg border-2 transition-all ${
                   errors.name
                     ? 'border-red-300 focus:border-red-500'
@@ -143,22 +149,22 @@ export function SourceDialog({
               {errors.name && <p className="text-xs text-red-500 mt-1.5 animate-fade-in-down">{errors.name}</p>}
             </div>
 
-            {/* 描述 */}
+            {/* Description */}
             <div className="space-y-2.5">
               <Label htmlFor="description-input" className="text-sm font-medium text-gray-800">
-                描述
+                Description
               </Label>
               <Textarea
                 id="description-input"
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="描述这个信息源的用途"
+                placeholder="Describe the purpose of this source"
                 rows={3}
                 className="resize-none rounded-lg border-2 border-gray-200 hover:border-gray-300 focus:border-gray-500 transition-all"
               />
             </div>
 
-            {/* 按钮 */}
+            {/* Buttons */}
             <div className="flex gap-3 pt-3">
               <motion.button
                 type="button"
@@ -167,7 +173,7 @@ export function SourceDialog({
                 whileTap={{ scale: 0.99 }}
                 className="flex-1 h-11 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-all"
               >
-                取消
+                Cancel
               </motion.button>
               <motion.button
                 type="submit"
@@ -176,7 +182,7 @@ export function SourceDialog({
                 whileTap={{ scale: isLoading ? 1 : 0.99 }}
                 className="flex-1 h-11 px-4 text-sm font-medium text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 active:bg-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all"
               >
-                {isLoading ? '提交中...' : isEditMode ? '更新' : '创建'}
+                {isLoading ? 'Submitting...' : isEditMode ? 'Update' : 'Create'}
               </motion.button>
             </div>
           </form>

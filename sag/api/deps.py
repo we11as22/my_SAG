@@ -1,6 +1,6 @@
-"""依赖注入
+"""Dependency injection
 
-提供通用的依赖项
+Provides common dependencies
 """
 
 from typing import AsyncGenerator
@@ -13,24 +13,27 @@ from sag.exceptions import DatabaseError
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """获取数据库会话
+    """Get database session
     
-    处理 FastAPI 的 HTTPException，不将其视为数据库错误
+    Handles FastAPI's HTTPException, not treating it as a database error
     """
     client = get_mysql_client()
-    session = client.session_factory()
     
-    try:
-        yield session
-        await session.commit()
-    except HTTPException:
-        # HTTPException 是业务逻辑异常，不需要回滚
-        await session.commit()
-        raise
-    except Exception as e:
-        # 其他异常才是真正的数据库错误
-        await session.rollback()
-        raise DatabaseError(f"数据库操作失败: {e}") from e
-    finally:
-        await session.close()
+    async with client.session_factory() as session:
+        try:
+            yield session
+            # Only commit if no exception occurred
+            await session.commit()
+        except HTTPException:
+            # HTTPException is a business logic exception, commit changes before raising
+            await session.commit()
+            raise
+        except Exception as e:
+            # Other exceptions are real database errors, rollback
+            await session.rollback()
+            # Log the error for debugging
+            import traceback
+            print(f"Database error in get_db: {e}")
+            print(traceback.format_exc())
+            raise DatabaseError(f"Database operation failed: {e}") from e
 

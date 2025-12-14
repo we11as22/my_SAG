@@ -27,6 +27,21 @@ class ExtractBaseConfig(SAGBaseModel):
         description="最大并发数（Agent并发处理chunk数量）"
     )
 
+    # === 批次控制 ===
+    max_tokens: int = Field(
+        default=8000,
+        ge=100,
+        le=100000,
+        description="每个批次的最大token数（用于批量提取时分组chunks）"
+    )
+    
+    max_sections: int = Field(
+        default=50,
+        ge=1,
+        le=1000,
+        description="每个批次的最大chunk数量"
+    )
+
     # === 实体配置 ===
     custom_entity_types: List[CustomEntityType] = Field(
         default_factory=list,

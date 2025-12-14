@@ -53,34 +53,37 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: sag_api
+    # Use host network to access LLM server on localhost:8011 (like in warhammer_40000_graph_rag)
+    network_mode: host
     environment:
-      # Database configuration (connect to host services)
-      - MYSQL_HOST=mysql
+      # Database configuration (connect to Docker services via host network)
+      # MySQL is accessible via Docker bridge IP or use service discovery
+      - MYSQL_HOST=127.0.0.1
       - MYSQL_PORT=${MYSQL_PORT:-3306}
       - MYSQL_USER=${MYSQL_USER:-sag}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE:-sag}
 
-      # Elasticsearch configuration (connect to host services)
-      - ES_HOST=elasticsearch
+      # Elasticsearch configuration (connect via host network)
+      - ES_HOST=127.0.0.1
       - ES_PORT=${ES_PORT:-9200}
 
       # LLM configuration
+      # With network_mode: host, we can access localhost:8011 directly (like in warhammer_40000_graph_rag)
       - LLM_MODEL=${LLM_MODEL:-sophnet/Qwen3-30B-A3B-Thinking-2507}
-      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://127.0.0.1:8011/v1}
       - LLM_API_KEY=${LLM_API_KEY}
 
       # Embedding configuration
       - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-Qwen/Qwen3-Embedding-0.6B}
-      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL}
+      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL:-http://127.0.0.1:8009/v1}
       - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
 
       # System configuration
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - API_WORKERS=${API_WORKERS:-4} # Production environment default 4 workers
-    expose:
-      - "8000:8000"
+    # Note: With network_mode: host, expose/ports are not needed
     volumes:
       - ./uploads:/app/uploads
       - ./migrations:/app/migrations
@@ -101,13 +104,8 @@ services:
         echo '🌐 Starting API service (Workers: $${API_WORKERS:-4})...' &&
         uv run python -m sag.api.main
       "
-    depends_on:
-      mysql:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - sag_network
+    # Note: With network_mode: host, depends_on and networks are not compatible
+    # MySQL and Elasticsearch are accessed via 127.0.0.1 with their exposed ports
     restart: unless-stopped
 
   # Frontend Web service
@@ -130,13 +128,16 @@ services:
   nginx:
     image: nginx:alpine
     container_name: sag_nginx
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - web
-      - api
+      # Note: API uses network_mode: host, so it's not in Docker network
+      # Nginx accesses it via host.docker.internal:8000
     networks:
       - sag_network
     restart: unless-stopped

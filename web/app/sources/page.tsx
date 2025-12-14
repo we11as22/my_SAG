@@ -14,13 +14,13 @@ import { toast } from 'sonner'
 export default function SourcesPage() {
   const queryClient = useQueryClient()
 
-  // 对话框状态
+  // Dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedSource, setSelectedSource] = useState<Source | null>(null)
 
-  // 获取信息源列表
+  // Get source list
   const { data: sourcesData, isLoading } = useQuery({
     queryKey: ['sources'],
     queryFn: () => apiClient.getSources(),
@@ -28,20 +28,22 @@ export default function SourcesPage() {
 
   const sources = sourcesData?.data || []
 
-  // 创建 Mutation
+  // Create Mutation
   const createMutation = useMutation({
     mutationFn: (data: SourceFormData) => apiClient.createSource(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
       setIsCreateDialogOpen(false)
-      toast.success('信息源创建成功')
+      toast.success('Source created successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || '创建失败')
+      console.error('Create source error:', error)
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to create source'
+      toast.error(errorMessage)
     },
   })
 
-  // 更新 Mutation
+  // Update Mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: SourceFormData }) =>
       apiClient.updateSource(id, data),
@@ -49,28 +51,28 @@ export default function SourcesPage() {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
       setIsEditDialogOpen(false)
       setSelectedSource(null)
-      toast.success('信息源更新成功')
+      toast.success('Source updated successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || '更新失败')
+      toast.error(error.response?.data?.error?.message || 'Failed to update')
     },
   })
 
-  // 删除 Mutation
+  // Delete Mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiClient.deleteSource(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
       setIsDeleteDialogOpen(false)
       setSelectedSource(null)
-      toast.success('信息源删除成功')
+      toast.success('Source deleted successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || '删除失败')
+      toast.error(error.response?.data?.error?.message || 'Failed to delete')
     },
   })
 
-  // 处理函数
+  // Handler functions
   const handleCreate = (data: SourceFormData) => {
     createMutation.mutate(data)
   }
@@ -99,7 +101,7 @@ export default function SourcesPage() {
 
   return (
     <div className="space-y-8 pb-8">
-      {/* 页面标题 */}
+      {/* Page title */}
       <motion.div
         className="flex justify-between items-center"
         initial={{ opacity: 0, y: 20 }}
@@ -111,8 +113,8 @@ export default function SourcesPage() {
             <Database className="w-6 h-6 text-emerald-600" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800">信息源管理</h1>
-            <p className="text-gray-500 text-xs">管理不同的数据源，隔离不同来源的数据</p>
+            <h1 className="text-xl font-bold text-gray-800">Source Management</h1>
+            <p className="text-gray-500 text-xs">Manage different data sources, isolate data from different sources</p>
           </div>
         </div>
         <button
@@ -123,13 +125,13 @@ export default function SourcesPage() {
         </button>
       </motion.div>
 
-      {/* 信息源列表 */}
+      {/* Source list */}
       {isLoading ? (
         <div className="text-center py-12">
           <div className="w-10 h-10 mx-auto mb-3 rounded-lg bg-gray-100 flex items-center justify-center animate-pulse">
             <Database className="w-5 h-5 text-gray-400 animate-spin" />
           </div>
-          <p className="text-sm text-gray-500">加载中...</p>
+          <p className="text-sm text-gray-500">Loading...</p>
         </div>
       ) : sources.length === 0 ? (
         <motion.div
@@ -141,8 +143,8 @@ export default function SourcesPage() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gray-100 flex items-center justify-center">
             <Plus className="w-8 h-8 text-gray-400" />
           </div>
-          <p className="text-sm font-medium text-gray-700 mb-1">暂无信息源</p>
-          <p className="text-xs text-gray-500">点击右上角"+"按钮创建新的信息源</p>
+          <p className="text-sm font-medium text-gray-700 mb-1">No sources yet</p>
+          <p className="text-xs text-gray-500">Click the "+" button in the top right to create a new source</p>
         </motion.div>
       ) : (
         <motion.div
@@ -164,7 +166,7 @@ export default function SourcesPage() {
         </motion.div>
       )}
 
-      {/* 对话框 */}
+      {/* Dialogs */}
       <SourceDialog
         open={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}

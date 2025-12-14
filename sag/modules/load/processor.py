@@ -77,9 +77,6 @@ class DocumentProcessor:
             >>> print(metadata["title"])
         """
         try:
-            # 截断内容（避免超出token限制）
-            # truncated_content = self._truncate_content(content, max_tokens=1000000)
-
             # generate_summary_with_ratio 现在直接返回解析后的字典
             metadata = await self.sumy_summary.generate_summary_with_ratio(
                 content,
@@ -127,17 +124,12 @@ class DocumentProcessor:
 
             total_start = time.perf_counter()
 
-            # 截断文本（避免超出token限制）
-            truncate_start = time.perf_counter()
-            truncated_text = self._truncate_content(text, max_tokens=8000)
-            truncate_time = time.perf_counter() - truncate_start
-
             logger.debug(f"生成向量，文本长度: {len(text)}字符")
 
             # 使用 factory 的全局单例（支持数据库配置管理）
             api_start = time.perf_counter()
             embedding_client = await get_embedding_client(scenario='general')
-            embedding = await embedding_client.generate(truncated_text)
+            embedding = await embedding_client.generate(text)
             api_time = time.perf_counter() - api_start
 
             total_time = time.perf_counter() - total_start
@@ -145,7 +137,6 @@ class DocumentProcessor:
             logger.info(
                 f"向量生成耗时统计 - "
                 f"总耗时: {total_time:.3f}s, "
-                f"文本截断: {truncate_time:.3f}s ({truncate_time/total_time*100:.1f}%), "
                 f"API调用: {api_time:.3f}s ({api_time/total_time*100:.1f}%), "
                 f"向量维度: {len(embedding)}"
             )
@@ -204,33 +195,4 @@ class DocumentProcessor:
 
         except Exception as e:
             raise LoadError(f"文章处理失败: {e}") from e
-
-    def _truncate_content(self, content: str, max_tokens: int) -> str:
-        """
-        截断内容以适应token限制
-
-        Args:
-            content: 原始内容
-            max_tokens: 最大token数
-
-        Returns:
-            截断后的内容
-        """
-        estimated_tokens = estimate_tokens(content)
-
-        if estimated_tokens <= max_tokens:
-            return content
-
-        # 按比例截断
-        ratio = max_tokens / estimated_tokens
-        target_length = int(len(content) * ratio * 0.9)  # 留10%余量
-
-        truncated = content[:target_length]
-
-        logger.debug(
-            f"内容截断: {len(content)}字符 -> {len(truncated)}字符 "
-            f"({estimated_tokens} tokens -> ~{max_tokens} tokens)"
-        )
-
-        return truncated
 

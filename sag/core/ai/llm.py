@@ -8,6 +8,7 @@ Note:
   automatically detects and handles this situation.
 """
 
+import asyncio
 from typing import Any, AsyncIterator, Iterable, List, Optional, cast
 
 from openai import (
@@ -30,6 +31,9 @@ logger = get_logger("ai.openai")
 class OpenAIClient(BaseLLMClient):
     """OpenAI client implementation"""
 
+    # Class-level semaphore to limit concurrent LLM requests across all instances
+    _semaphore: Optional[asyncio.Semaphore] = None
+
     def __init__(self, config: ModelConfig) -> None:
         """
         Initialize OpenAI client
@@ -45,6 +49,19 @@ class OpenAIClient(BaseLLMClient):
             base_url=config.base_url,
             timeout=config.timeout,
         )
+
+    async def _get_semaphore(self) -> asyncio.Semaphore:
+        """
+        Get or create class-level semaphore (lazy initialization in async context)
+        
+        Returns:
+            Semaphore instance with limit of 8 concurrent requests
+        """
+        if OpenAIClient._semaphore is None:
+            # Create semaphore in async context (event loop is already running)
+            OpenAIClient._semaphore = asyncio.Semaphore(8)
+            logger.info("Initialized LLM semaphore with limit: 8 concurrent requests")
+        return OpenAIClient._semaphore
 
     async def chat(
         self,
@@ -84,14 +101,17 @@ class OpenAIClient(BaseLLMClient):
                 self.config.timeout,
             )
 
-            # Call API (use cast for explicit type conversion)
-            response = await self.client.chat.completions.create(
-                model=self.config.model,
-                messages=cast(Iterable[ChatCompletionMessageParam], api_messages),
-                temperature=temperature or self.config.temperature,
-                max_tokens=max_tokens or self.config.max_tokens,  # Read from config, not hardcoded
-                **kwargs,
-            )
+            # Use semaphore to limit concurrent requests (max 8 at a time)
+            semaphore = await self._get_semaphore()
+            async with semaphore:
+                # Call API (use cast for explicit type conversion)
+                response = await self.client.chat.completions.create(
+                    model=self.config.model,
+                    messages=cast(Iterable[ChatCompletionMessageParam], api_messages),
+                    temperature=temperature or self.config.temperature,
+                    max_tokens=max_tokens or self.config.max_tokens,  # Read from config, not hardcoded
+                    **kwargs,
+                )
 
             # Parse response
             choice = response.choices[0]
@@ -186,15 +206,18 @@ class OpenAIClient(BaseLLMClient):
             # Prepare messages
             api_messages = self._prepare_messages(messages)
 
-            # Call streaming API (use cast for explicit type conversion)
-            stream = await self.client.chat.completions.create(
-                model=self.config.model,
-                messages=cast(Iterable[ChatCompletionMessageParam], api_messages),
-                temperature=temperature or self.config.temperature,
-                max_tokens=max_tokens or self.config.max_tokens,
-                stream=True,
-                **kwargs,
-            )
+            # Use semaphore to limit concurrent requests (max 8 at a time)
+            semaphore = await self._get_semaphore()
+            async with semaphore:
+                # Call streaming API (use cast for explicit type conversion)
+                stream = await self.client.chat.completions.create(
+                    model=self.config.model,
+                    messages=cast(Iterable[ChatCompletionMessageParam], api_messages),
+                    temperature=temperature or self.config.temperature,
+                    max_tokens=max_tokens or self.config.max_tokens,
+                    stream=True,
+                    **kwargs,
+                )
 
             # Generate content fragments one by one
             async for chunk in stream:

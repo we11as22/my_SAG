@@ -11,7 +11,7 @@ from sag.db.models import SourceConfig, Article, EntityType
 
 
 class SourceService:
-    """信息源服务"""
+    """Source service"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -22,22 +22,30 @@ class SourceService:
         description: Optional[str] = None,
         config: Optional[dict] = None,
     ) -> SourceConfigResponse:
-        """创建信息源"""
-        source = SourceConfig(
-            id=str(uuid.uuid4()),
-            name=name,
-            description=description,
-            config=config or {},
-        )
+        """Create source"""
+        try:
+            source = SourceConfig(
+                id=str(uuid.uuid4()),
+                name=name,
+                description=description,
+                config=config or {},
+            )
 
-        self.db.add(source)
-        await self.db.commit()
-        await self.db.refresh(source)
+            self.db.add(source)
+            await self.db.flush()  # Flush to get the ID, but don't commit yet
+            await self.db.refresh(source)
+            # Note: commit is handled by get_db() dependency
 
-        return SourceConfigResponse.model_validate(source)
+            return SourceConfigResponse.model_validate(source)
+        except Exception as e:
+            # Log the error for debugging
+            import traceback
+            print(f"Error creating source: {e}")
+            print(traceback.format_exc())
+            raise
 
     async def get_source(self, source_config_id: str) -> Optional[SourceConfigResponse]:
-        """获取信息源"""
+        """Get source"""
         result = await self.db.execute(
             select(SourceConfig).where(SourceConfig.id == source_config_id)
         )
@@ -53,8 +61,8 @@ class SourceService:
         page_size: int = 20,
         name_filter: Optional[str] = None,
     ) -> Tuple[List[SourceConfigResponse], int]:
-        """获取信息源列表（包含文档数量和实体类型数量）"""
-        # 子查询：统计每个 source 的文档数量（所有状态）
+        """Get source list (including document count and entity type count)"""
+        # Subquery: Count documents for each source (all statuses)
         document_count_subq = (
             select(
                 Article.source_config_id,
@@ -64,18 +72,18 @@ class SourceService:
             .subquery()
         )
 
-        # 子查询：统计每个 source 的专属实体类型数量（排除全局类型）
+        # Subquery: Count source-specific entity types (exclude global types)
         entity_types_count_subq = (
             select(
                 EntityType.source_config_id,
                 func.count(EntityType.id).label("entity_types_count")
             )
-            .where(EntityType.source_config_id.isnot(None))  # 只统计专属类型，排除 source_config_id 为 NULL 的全局类型
+            .where(EntityType.source_config_id.isnot(None))  # Only count source-specific types, exclude global types where source_config_id is NULL
             .group_by(EntityType.source_config_id)
             .subquery()
         )
 
-        # 主查询：获取 source 信息并 JOIN 两个统计子查询
+        # Main query: Get source information and JOIN two statistical subqueries
         query = (
             select(
                 SourceConfig,
@@ -89,7 +97,7 @@ class SourceService:
         if name_filter:
             query = query.where(SourceConfig.name.like(f"%{name_filter}%"))
 
-        # 获取总数（source 的数量）
+        # Get total count (number of sources)
         count_query = select(func.count()).select_from(SourceConfig)
         if name_filter:
             count_query = count_query.where(SourceConfig.name.like(f"%{name_filter}%"))
@@ -97,15 +105,15 @@ class SourceService:
         total_result = await self.db.execute(count_query)
         total = total_result.scalar() or 0
 
-        # 分页和排序
+        # Pagination and sorting
         query = query.order_by(SourceConfig.created_time.desc())
         query = query.offset((page - 1) * page_size).limit(page_size)
 
-        # 执行查询
+        # Execute query
         result = await self.db.execute(query)
         rows = result.all()
 
-        # 构建响应
+        # Build response
         sources = []
         for source, document_count, entity_types_count in rows:
             source_dict = {
@@ -129,7 +137,7 @@ class SourceService:
         description: Optional[str] = None,
         config: Optional[dict] = None,
     ) -> Optional[SourceConfigResponse]:
-        """更新信息源"""
+        """Update source"""
         result = await self.db.execute(
             select(SourceConfig).where(SourceConfig.id == source_config_id)
         )
@@ -145,13 +153,13 @@ class SourceService:
         if config is not None:
             source.config = config
 
-        await self.db.commit()
+        await self.db.flush()  # Flush changes, commit is handled by get_db()
         await self.db.refresh(source)
 
         return SourceConfigResponse.model_validate(source)
 
     async def delete_source(self, source_config_id: str) -> bool:
-        """删除信息源"""
+        """Delete source"""
         result = await self.db.execute(
             select(SourceConfig).where(SourceConfig.id == source_config_id)
         )
@@ -161,7 +169,7 @@ class SourceService:
             return False
 
         await self.db.delete(source)
-        await self.db.commit()
+        # Note: commit is handled by get_db() dependency
 
         return True
 

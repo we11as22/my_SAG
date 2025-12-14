@@ -1,6 +1,6 @@
-"""启动 SAG API 服务
+"""Start SAG API service
 
-生产环境启动脚本
+Production environment startup script
 """
 
 import uvicorn
@@ -9,20 +9,20 @@ from sag.core.config.settings import get_settings
 
 
 def main():
-    """启动 API"""
+    """Start API"""
     settings = get_settings()
 
-    # 从环境变量获取配置，或使用默认值
+    # Get configuration from environment variables, or use defaults
     host = getattr(settings, "api_host", "0.0.0.0")
     port = getattr(settings, "api_port", 8000)
     workers = getattr(settings, "api_workers", 4)
     debug = getattr(settings, "debug", False)
 
-    print(f"🚀 启动 SAG API 服务")
-    print(f"   主机: {host}")
-    print(f"   端口: {port}")
-    print(f"   Worker数: {workers if not debug else 1}")
-    print(f"   调试模式: {debug}")
+    print(f"🚀 Starting SAG API service")
+    print(f"   Host: {host}")
+    print(f"   Port: {port}")
+    print(f"   Workers: {workers if not debug else 1}")
+    print(f"   Debug mode: {debug}")
 
     uvicorn.run(
         "sag.api.main:app",
